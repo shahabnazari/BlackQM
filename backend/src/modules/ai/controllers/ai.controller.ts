@@ -15,8 +15,51 @@ import {
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { Public } from '../../auth/decorators/public.decorator';
 import { Throttle } from '@nestjs/throttler';
-import { OpenAIService } from '../services/openai.service';
+import { UnifiedAIService } from '../services/unified-ai.service';
 import { AICostService } from '../services/ai-cost.service';
+
+// ============================================================================
+// Phase 10.185 Week 3: System Prompts for AI Controller
+// ============================================================================
+
+const TEXT_ANALYSIS_SYSTEM_PROMPT = `You are an expert text analyst specializing in research content analysis.
+
+Your role is to:
+1. Analyze sentiment, themes, and potential biases in text
+2. Identify key patterns and linguistic features
+3. Provide actionable insights for researchers
+
+Output format depends on the analysis type requested.`;
+
+const PARTICIPANT_ASSISTANCE_SYSTEM_PROMPT = `You are a friendly and helpful research study assistant.
+
+Your role is to:
+1. Guide participants through Q-methodology studies
+2. Provide clear, encouraging instructions
+3. Answer questions about study procedures
+4. Help participants feel comfortable and informed
+
+Keep responses concise (2-3 sentences) and supportive.`;
+
+const RESPONSE_ANALYSIS_SYSTEM_PROMPT = `You are an expert Q-methodology data analyst.
+
+Your role is to:
+1. Identify patterns in Q-sort responses
+2. Detect anomalies and quality issues
+3. Extract meaningful insights
+4. Flag suspicious response patterns
+
+Output must be valid JSON as specified in the prompt.`;
+
+const BIAS_DETECTION_SYSTEM_PROMPT = `You are an expert in detecting bias in research statements.
+
+Your role is to:
+1. Identify political, cultural, gender, age, and socioeconomic biases
+2. Detect leading language and loaded terms
+3. Provide specific recommendations for neutralization
+4. Rate bias severity on a 0-1 scale
+
+Output must be valid JSON as specified in the prompt.`;
 import { StatementGeneratorService } from '../services/statement-generator.service';
 import { GridRecommendationService } from '../services/grid-recommendation.service';
 import { QuestionnaireGeneratorService } from '../services/questionnaire-generator.service';
@@ -72,7 +115,7 @@ export class AIController {
   private readonly logger = new Logger(AIController.name);
 
   constructor(
-    private readonly openAIService: OpenAIService,
+    private readonly unifiedAIService: UnifiedAIService,
     private readonly costService: AICostService,
     private readonly statementGenerator: StatementGeneratorService,
     private readonly gridRecommendation: GridRecommendationService,
@@ -175,11 +218,12 @@ export class AIController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async analyzeText(@Body() dto: AnalyzeTextDto, @Req() req: any) {
     try {
-      const analysis = await this.openAIService.analyzeText(
-        dto.text,
-        dto.analysisType,
-        req.user.id,
-      );
+      const prompt = `Analyze the following text for ${dto.analysisType}:\n\n${dto.text}`;
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        cache: true,
+        systemPrompt: TEXT_ANALYSIS_SYSTEM_PROMPT,
+      });
+      const analysis = response.content;
 
       return {
         success: true,
@@ -380,11 +424,12 @@ export class AIController {
       );
 
       const prompt = this.buildParticipantAssistancePrompt(dto);
-      const response = await this.openAIService.generateCompletion(prompt, {
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'fast',
         temperature: 0.7,
         maxTokens: 500,
-        userId: req.user.id,
+        cache: true,
+        systemPrompt: PARTICIPANT_ASSISTANCE_SYSTEM_PROMPT,
       });
 
       return {
@@ -420,11 +465,12 @@ export class AIController {
 
       for (const type of analysisTypes) {
         const prompt = this.buildAnalysisPrompt(type, dto.responses);
-        const result = await this.openAIService.generateCompletion(prompt, {
+        const result = await this.unifiedAIService.generateCompletion(prompt, {
           model: 'smart',
           temperature: 0.5,
           maxTokens: 1000,
-          userId: req.user.id,
+          cache: true,
+          systemPrompt: RESPONSE_ANALYSIS_SYSTEM_PROMPT,
         });
 
         analysis[type] = this.parseAnalysisResult(result.content);
@@ -454,11 +500,12 @@ export class AIController {
       const depth = dto.analysisDepth || 'quick';
       const prompt = this.buildBiasDetectionPrompt(dto.statements, depth);
 
-      const response = await this.openAIService.generateCompletion(prompt, {
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: depth === 'comprehensive' ? 'smart' : 'fast',
         temperature: 0.3,
         maxTokens: depth === 'comprehensive' ? 2000 : 1000,
-        userId: req.user.id,
+        cache: true,
+        systemPrompt: BIAS_DETECTION_SYSTEM_PROMPT,
       });
 
       const biasAnalysis = this.parseBiasAnalysis(response.content);
@@ -847,11 +894,12 @@ Return JSON with:
       const prompt = `Rewrite this statement to be more neutral and unbiased: "${statement}"
 Return only the improved statement.`;
 
-      const alternative = await this.openAIService.generateCompletion(prompt, {
+      const alternative = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'fast',
         temperature: 0.7,
         maxTokens: 100,
-        userId,
+        cache: true,
+        systemPrompt: BIAS_DETECTION_SYSTEM_PROMPT,
       });
 
       alternatives[statement] = alternative.content.trim();

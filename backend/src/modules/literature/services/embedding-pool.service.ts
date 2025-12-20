@@ -121,8 +121,11 @@ export interface PoolHealth {
 /**
  * Number of worker threads to spawn
  * Phase 10.125: Increased from 4 to 6 for 8-core i9 (leaves 2 cores for main thread + services)
+ * Phase 10.195: Made configurable via env var for different machines
+ * - Development laptop: 2-3 workers recommended
+ * - Production server: 4-6 workers based on CPU cores
  */
-const POOL_SIZE = 6;
+const POOL_SIZE = parseInt(process.env.EMBEDDING_POOL_SIZE || '3', 10);
 
 /**
  * Default timeout for embedding operations (30s)

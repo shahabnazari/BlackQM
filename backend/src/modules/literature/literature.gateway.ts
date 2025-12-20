@@ -211,6 +211,9 @@ export class LiteratureGateway
         // Phase 10.115: Pass user-selected sources to search-stream.service
         // If not provided, search-stream.service uses ALL_PROGRESSIVE_SOURCES filtered by availability
         sources: options.sources,
+        // Phase 10.195: Advanced Research Filters (Zero-Debt WebSocket Integration)
+        hasFullTextOnly: options.hasFullTextOnly,
+        excludeBooks: options.excludeBooks,
       };
 
       // Create event emitter that streams to this client
@@ -685,6 +688,7 @@ export class LiteratureGateway
 
   /**
    * Batch detect full-text for multiple papers via WebSocket
+   * Netflix-Grade: Enhanced error handling and validation
    *
    * @event fulltext:detect-batch { papers: Array<{ id, doi?, title? }> }
    * @emits fulltext:batch-result
@@ -697,8 +701,33 @@ export class LiteratureGateway
     try {
       const { papers } = data;
 
+      // Netflix-Grade: Input validation
       if (!papers || !Array.isArray(papers) || papers.length === 0) {
-        return { success: false, error: 'papers array is required' };
+        const error = 'papers array is required and must not be empty';
+        this.logger.warn(`[FullText] Invalid batch request from ${client.id}: ${error}`);
+        client.emit('fulltext:batch-result', {
+          results: {},
+          successfulPapers: [],
+          failedPapers: [],
+          totalDurationMs: 0,
+          avgDurationMs: 0,
+        });
+        return { success: false, error };
+      }
+
+      // Netflix-Grade: Validate paper structure
+      const invalidPapers = papers.filter((p) => !p || !p.id || (typeof p.id !== 'string'));
+      if (invalidPapers.length > 0) {
+        const error = `Invalid paper structure: ${invalidPapers.length} papers missing required 'id' field`;
+        this.logger.warn(`[FullText] Invalid papers in batch from ${client.id}: ${error}`);
+        client.emit('fulltext:batch-result', {
+          results: {},
+          successfulPapers: [],
+          failedPapers: [],
+          totalDurationMs: 0,
+          avgDurationMs: 0,
+        });
+        return { success: false, error };
       }
 
       this.logger.debug(`[FullText] Client ${client.id} starting batch detection for ${papers.length} papers`);
@@ -706,13 +735,35 @@ export class LiteratureGateway
       // Perform batch detection
       const result = await this.fulltextDetection.detectBatch(papers);
 
-      // Emit result
+      // Netflix-Grade: Emit result (even if all failed, still emit for frontend to handle)
       client.emit('fulltext:batch-result', result);
 
-      return { success: true, stats: { total: papers.length, successful: result.successfulPapers.length, failed: result.failedPapers.length } };
+      this.logger.debug(
+        `[FullText] Batch detection complete for ${client.id}: ${result.successfulPapers.length} successful, ${result.failedPapers.length} failed`,
+      );
+
+      return {
+        success: true,
+        stats: {
+          total: papers.length,
+          successful: result.successfulPapers.length,
+          failed: result.failedPapers.length,
+        },
+      };
     } catch (error) {
-      this.logger.error(`[FullText] Batch detection error: ${(error as Error).message}`);
-      return { success: false, error: (error as Error).message };
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.error(`[FullText] Batch detection error for ${client.id}: ${errorMessage}`, error instanceof Error ? error.stack : undefined);
+
+      // Netflix-Grade: Emit error result so frontend can handle it
+      client.emit('fulltext:batch-result', {
+        results: {},
+        successfulPapers: [],
+        failedPapers: [],
+        totalDurationMs: 0,
+        avgDurationMs: 0,
+      });
+
+      return { success: false, error: errorMessage };
     }
   }
 }

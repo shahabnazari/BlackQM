@@ -1,7 +1,27 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
-import { OpenAIService } from '../../ai/services/openai.service';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { CacheService } from '../../../common/cache.service';
+
+// ============================================================================
+// Phase 10.185 Week 3: System Prompts for Explainability
+// ============================================================================
+
+const ALTERNATIVE_EXPLANATION_SYSTEM_PROMPT = `You are an expert Q-methodology researcher providing alternative interpretations for factor analysis.
+
+Your role is to:
+1. Analyze factor patterns from sociological and psychological perspectives
+2. Identify key differences from typical interpretations
+3. Provide supporting evidence from statement loadings
+4. Assess strengths and weaknesses of alternative lenses
+
+Guidelines:
+- Ground interpretations in established theoretical frameworks
+- Consider how different disciplinary perspectives shape understanding
+- Identify novel insights that emerge from alternative lenses
+- Acknowledge limitations of each interpretive approach
+
+Output must be valid JSON with keys: narrative, keyDifferences, supportingEvidence, strengths, weaknesses.`;
 import {
   QAnalysisResult,
   FactorArray,
@@ -153,7 +173,7 @@ export interface AlternativeExplanation {
 export class ExplainabilityService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly openaiService: OpenAIService,
+    private readonly unifiedAIService: UnifiedAIService,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -942,9 +962,11 @@ Provide:
 Format as JSON with keys: narrative, keyDifferences, supportingEvidence, strengths, weaknesses`;
 
       try {
-        const response = await this.openaiService.generateCompletion(prompt, {
+        const response = await this.unifiedAIService.generateCompletion(prompt, {
           temperature: 0.8,
           maxTokens: 800,
+          cache: true, // Phase 10.185: Enable caching
+          systemPrompt: ALTERNATIVE_EXPLANATION_SYSTEM_PROMPT,
         });
 
         const responseText =

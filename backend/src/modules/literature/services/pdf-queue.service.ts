@@ -5,10 +5,12 @@ import { PDFParsingService } from './pdf-parsing.service';
 
 /**
  * Phase 10 Day 5.15: PDF Processing Queue Service
+ * Phase 10.185: Netflix-Grade Smart Retry Logic
  *
  * Lightweight background job queue for PDF processing:
  * - Async processing with event emitters
- * - Retry logic (3 attempts with exponential backoff)
+ * - Smart retry logic (skip non-retryable errors)
+ * - Publisher-specific retry strategies
  * - Real-time progress events via EventEmitter
  * - Rate limiting (10 PDFs/minute)
  */
@@ -21,6 +23,9 @@ interface PDFJob {
   status: 'queued' | 'processing' | 'completed' | 'failed';
   progress: number; // 0-100
   error?: string;
+  errorCategory?: string; // Phase 10.185: Error categorization
+  retryable?: boolean; // Phase 10.185: Smart retry flag
+  publisher?: string; // Phase 10.185: Publisher detection
   createdAt: Date;
   startedAt?: Date;
   completedAt?: Date;
@@ -221,7 +226,72 @@ export class PDFQueueService {
   }
 
   /**
-   * Process a single job with retry logic
+   * Phase 10.185: Detect publisher from paper identifiers
+   * Mirrors pdf-parsing.service.ts detectPublisher() for consistency
+   */
+  private async detectPublisherFromPaper(paperId: string): Promise<string> {
+    try {
+      const paper = await this.prisma.paper.findUnique({
+        where: { id: paperId },
+        select: { url: true, doi: true },
+      });
+
+      if (!paper) return 'unknown';
+
+      const urlOrDoi = paper.url || paper.doi || '';
+      const lower = urlOrDoi.toLowerCase();
+
+      // URL-based detection
+      if (lower.includes('springer') || lower.includes('link.springer')) return 'springer';
+      if (lower.includes('nature') || lower.includes('nature.com')) return 'nature';
+      if (lower.includes('wiley') || lower.includes('onlinelibrary.wiley')) return 'wiley';
+      if (lower.includes('mdpi') || lower.includes('mdpi.com')) return 'mdpi';
+      if (lower.includes('frontiers') || lower.includes('frontiersin.org')) return 'frontiers';
+      if (lower.includes('plos') || lower.includes('plos.org')) return 'plos';
+      if (lower.includes('elsevier') || lower.includes('sciencedirect')) return 'elsevier';
+      if (lower.includes('ieee') || lower.includes('ieee.org')) return 'ieee';
+      if (lower.includes('arxiv') || lower.includes('arxiv.org')) return 'arxiv';
+      if (lower.includes('pubmed') || lower.includes('ncbi.nlm.nih.gov') || lower.includes('pmc')) return 'pmc';
+      if (lower.includes('sage') || lower.includes('sagepub.com')) return 'sage';
+      if (lower.includes('taylor') || lower.includes('tandfonline')) return 'taylorfrancis';
+      if (lower.includes('jama') || lower.includes('jamanetwork')) return 'jama';
+
+      // DOI prefix detection
+      if (lower.startsWith('10.1007/')) return 'springer';
+      if (lower.startsWith('10.1038/')) return 'nature';
+      if (lower.startsWith('10.1111/') || lower.startsWith('10.1002/')) return 'wiley';
+      if (lower.startsWith('10.3390/')) return 'mdpi';
+      if (lower.startsWith('10.3389/')) return 'frontiers';
+      if (lower.startsWith('10.1371/')) return 'plos';
+      if (lower.startsWith('10.1016/')) return 'elsevier';
+      if (lower.startsWith('10.1109/')) return 'ieee';
+      if (lower.startsWith('10.1177/')) return 'sage';
+      if (lower.startsWith('10.1080/')) return 'taylorfrancis';
+      if (lower.startsWith('10.1001/')) return 'jama';
+
+      return 'unknown';
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  /**
+   * Phase 10.185: Calculate backoff with jitter for publisher
+   */
+  private calculateBackoffMs(attempts: number, publisher: string): number {
+    const retryConfig = this.pdfParsingService.getRetryConfig(publisher);
+    const baseDelay = retryConfig.initialDelayMs * Math.pow(retryConfig.backoffMultiplier, attempts - 1);
+    const delay = Math.min(baseDelay, retryConfig.maxDelayMs);
+    const jitter = Math.random() * retryConfig.jitterMs;
+    return delay + jitter;
+  }
+
+  /**
+   * Process a single job with smart retry logic
+   * Phase 10.185: Netflix-Grade enhancements:
+   * - Smart retry (skip non-retryable errors like paywall, 404)
+   * - Publisher-specific retry strategies
+   * - Enhanced error tracking
    */
   private async processJob(job: PDFJob): Promise<void> {
     job.attempts++;
@@ -229,8 +299,17 @@ export class PDFQueueService {
     job.startedAt = new Date();
     job.progress = 10;
 
+    // Phase 10.185: Detect publisher for smart retry
+    if (!job.publisher) {
+      job.publisher = await this.detectPublisherFromPaper(job.paperId);
+    }
+
+    // Phase 10.185: Get publisher-specific max attempts
+    const retryConfig = this.pdfParsingService.getRetryConfig(job.publisher);
+    const effectiveMaxAttempts = Math.min(job.maxAttempts, retryConfig.maxAttempts);
+
     this.logger.log(
-      `Processing PDF job ${job.id} for paper ${job.paperId} (attempt ${job.attempts}/${job.maxAttempts})`,
+      `Processing PDF job ${job.id} for paper ${job.paperId} [${job.publisher}] (attempt ${job.attempts}/${effectiveMaxAttempts})`,
     );
 
     // Record request time for rate limiting
@@ -242,6 +321,7 @@ export class PDFQueueService {
       paperId: job.paperId,
       progress: 10,
       attempt: job.attempts,
+      publisher: job.publisher,
     });
 
     try {
@@ -264,7 +344,7 @@ export class PDFQueueService {
         job.completedAt = new Date();
 
         this.logger.log(
-          `✅ PDF job ${job.id} completed successfully (${result.wordCount} words)`,
+          `✅ PDF job ${job.id} completed successfully (${result.wordCount} words) [${job.publisher}]`,
         );
 
         // Emit success event
@@ -273,14 +353,22 @@ export class PDFQueueService {
           paperId: job.paperId,
           progress: 100,
           wordCount: result.wordCount,
+          publisher: job.publisher,
         });
       } else {
-        // Failed
-        if (job.attempts < job.maxAttempts) {
-          // Retry with exponential backoff
-          const backoffMs = Math.pow(2, job.attempts) * 1000; // 2s, 4s, 8s
+        // Failed - Phase 10.185: Smart retry logic
+        job.errorCategory = result.category;
+        job.retryable = result.retryable;
+
+        // Phase 10.185: Skip retry for non-retryable errors (paywall, 404, parsing)
+        const shouldRetry = result.retryable !== false && job.attempts < effectiveMaxAttempts;
+
+        if (shouldRetry) {
+          // Publisher-specific backoff with jitter
+          const backoffMs = this.calculateBackoffMs(job.attempts, job.publisher);
+
           this.logger.warn(
-            `PDF job ${job.id} failed (attempt ${job.attempts}), retrying in ${backoffMs}ms`,
+            `PDF job ${job.id} failed [${result.category || 'unknown'}] (attempt ${job.attempts}/${effectiveMaxAttempts}), retrying in ${Math.round(backoffMs)}ms`,
           );
 
           job.status = 'queued';
@@ -293,28 +381,37 @@ export class PDFQueueService {
             attempt: job.attempts,
             nextAttemptIn: backoffMs,
             error: result.error,
+            category: result.category,
+            publisher: job.publisher,
           });
 
           // Wait and requeue
           await this.sleep(backoffMs);
           this.queue.push(job.id);
         } else {
-          // Max retries reached
+          // Max retries reached OR non-retryable error
           job.status = 'failed';
           job.progress = 0;
           job.error = result.error;
           job.completedAt = new Date();
 
+          const reason = result.retryable === false
+            ? `non-retryable error [${result.category}]`
+            : `max attempts (${effectiveMaxAttempts})`;
+
           this.logger.error(
-            `❌ PDF job ${job.id} failed after ${job.maxAttempts} attempts: ${result.error}`,
+            `❌ PDF job ${job.id} failed due to ${reason}: ${result.error} [${job.publisher}]`,
           );
 
-          // Emit failed event
+          // Emit failed event with enhanced info
           this.eventEmitter.emit('pdf.job.failed', {
             jobId: job.id,
             paperId: job.paperId,
             error: result.error,
             attempts: job.attempts,
+            category: result.category,
+            retryable: result.retryable,
+            publisher: job.publisher,
           });
         }
       }
@@ -325,7 +422,7 @@ export class PDFQueueService {
       job.error = error instanceof Error ? error.message : 'Unknown error';
       job.completedAt = new Date();
 
-      this.logger.error(`❌ PDF job ${job.id} threw unexpected error:`, error);
+      this.logger.error(`❌ PDF job ${job.id} threw unexpected error [${job.publisher}]:`, error);
 
       // Emit failed event
       this.eventEmitter.emit('pdf.job.failed', {
@@ -333,6 +430,8 @@ export class PDFQueueService {
         paperId: job.paperId,
         error: job.error,
         attempts: job.attempts,
+        category: 'unexpected',
+        publisher: job.publisher,
       });
     }
   }

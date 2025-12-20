@@ -1,9 +1,11 @@
 /**
  * Phase 10.170 Week 4+: Theoretical Sampling Service Tests
+ * Phase 10.185: Netflix-Grade - Added Vitest imports for ESM compatibility
  *
  * Tests for Security Critical #11: Infinite loop guards
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   TheoreticalSamplingService,

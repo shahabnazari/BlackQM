@@ -1,3 +1,149 @@
+const plugin = require('tailwindcss/plugin');
+
+/**
+ * WCAG 2.1 AA Accessibility Plugin
+ * Provides utility classes that enforce accessibility standards
+ */
+const a11yPlugin = plugin(function({ addUtilities, addComponents }) {
+  // Accessibility utility classes
+  addUtilities({
+    // Touch target minimum size (WCAG 2.5.5 - 44x44px)
+    '.a11y-touch-target': {
+      'min-width': '44px',
+      'min-height': '44px',
+    },
+    // Enhanced touch target (48x48px - Material Design)
+    '.a11y-touch-target-lg': {
+      'min-width': '48px',
+      'min-height': '48px',
+    },
+    // Focus indicator (WCAG 2.4.7)
+    '.a11y-focus': {
+      '&:focus-visible': {
+        outline: '2px solid var(--color-primary, #6366f1)',
+        'outline-offset': '2px',
+      },
+    },
+    // High contrast focus
+    '.a11y-focus-high-contrast': {
+      '&:focus-visible': {
+        outline: '3px solid currentColor',
+        'outline-offset': '3px',
+      },
+    },
+    // Minimum readable text (WCAG 1.4.4 - 12px min)
+    '.a11y-text-min': {
+      'font-size': '12px',
+      'line-height': '1.5',
+    },
+    // Skip link for keyboard navigation
+    '.a11y-skip-link': {
+      position: 'absolute',
+      left: '-10000px',
+      top: 'auto',
+      width: '1px',
+      height: '1px',
+      overflow: 'hidden',
+      '&:focus': {
+        position: 'fixed',
+        top: '1rem',
+        left: '1rem',
+        width: 'auto',
+        height: 'auto',
+        padding: '0.5rem 1rem',
+        'background-color': 'var(--color-primary, #6366f1)',
+        color: 'white',
+        'border-radius': '0.375rem',
+        'z-index': '9999',
+        'font-weight': '600',
+      },
+    },
+    // Reduced motion safe animation
+    '.a11y-motion-safe': {
+      '@media (prefers-reduced-motion: reduce)': {
+        'animation-duration': '0.01ms !important',
+        'animation-iteration-count': '1 !important',
+        'transition-duration': '0.01ms !important',
+      },
+    },
+    // Screen reader only (improved sr-only)
+    '.a11y-sr-only': {
+      position: 'absolute',
+      width: '1px',
+      height: '1px',
+      padding: '0',
+      margin: '-1px',
+      overflow: 'hidden',
+      clip: 'rect(0, 0, 0, 0)',
+      'white-space': 'nowrap',
+      'border-width': '0',
+    },
+    // High contrast mode support
+    '.a11y-high-contrast': {
+      '@media (prefers-contrast: more)': {
+        'border-width': '2px',
+        'border-color': 'currentColor',
+      },
+    },
+  });
+
+  // Accessible component patterns
+  addComponents({
+    // Accessible button base
+    '.a11y-btn': {
+      'min-width': '44px',
+      'min-height': '44px',
+      'padding': '0.5rem 1rem',
+      'border-radius': '0.375rem',
+      'font-weight': '500',
+      'cursor': 'pointer',
+      '&:focus-visible': {
+        outline: '2px solid var(--color-primary, #6366f1)',
+        'outline-offset': '2px',
+      },
+      '&:disabled': {
+        opacity: '0.5',
+        cursor: 'not-allowed',
+        'pointer-events': 'none',
+      },
+      '@media (prefers-reduced-motion: reduce)': {
+        'transition': 'none',
+      },
+    },
+    // Accessible input base
+    '.a11y-input': {
+      'min-height': '44px',
+      'padding': '0.5rem 0.75rem',
+      'border-radius': '0.375rem',
+      'border': '1px solid var(--color-border, #d1d5db)',
+      'font-size': '16px', // Prevents zoom on iOS
+      '&:focus-visible': {
+        outline: '2px solid var(--color-primary, #6366f1)',
+        'outline-offset': '2px',
+        'border-color': 'var(--color-primary, #6366f1)',
+      },
+      '&:disabled': {
+        opacity: '0.5',
+        cursor: 'not-allowed',
+        'background-color': 'var(--color-fill, #f3f4f6)',
+      },
+    },
+    // Accessible link
+    '.a11y-link': {
+      'text-decoration': 'underline',
+      'text-underline-offset': '2px',
+      '&:hover': {
+        'text-decoration-thickness': '2px',
+      },
+      '&:focus-visible': {
+        outline: '2px solid var(--color-primary, #6366f1)',
+        'outline-offset': '2px',
+        'border-radius': '2px',
+      },
+    },
+  });
+});
+
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
@@ -189,5 +335,5 @@ module.exports = {
       },
     },
   },
-  plugins: [],
+  plugins: [a11yPlugin],
 };

@@ -44,6 +44,9 @@ const defaultFilters: SearchFilters = {
   author: '',
   authorSearchMode: 'contains',
   includeAIMode: true,
+  // Phase 10.195: New filter options
+  hasFullTextOnly: false,
+  excludeBooks: true, // Default: exclude books for research-focused results
 };
 
 /**

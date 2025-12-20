@@ -1,7 +1,71 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
-import { OpenAIService } from '../../ai/services/openai.service';
+// Phase 10.185 Week 2: Migrated from OpenAIService to UnifiedAIService
+// Benefits: Groq FREE tier first, 80% cost reduction with Gemini fallback
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { CacheService } from '../../../common/cache.service';
+
+// ============================================================================
+// SYSTEM PROMPTS (Phase 10.185: Netflix-grade prompt engineering)
+// ============================================================================
+
+/**
+ * System prompt for Q-methodology factor narrative generation
+ * Used for: generateFactorNarratives
+ */
+const FACTOR_NARRATIVE_SYSTEM_PROMPT = `You are an expert Q-methodology researcher skilled at interpreting factor analysis results and creating meaningful narratives.
+
+Your task is to analyze factor data and generate insightful interpretations that:
+1. Identify the core worldview or perspective represented by the factor
+2. Explain what distinguishes this factor from others
+3. Describe the participants who load on this factor
+4. Connect the statistical results to real-world meaning
+
+OUTPUT FORMAT:
+Title: [Descriptive title for the factor]
+Theme: [Main theme or worldview]
+Narrative: [200-300 word interpretation]
+
+Be precise, analytical, and grounded in the data provided.`;
+
+/**
+ * System prompt for research recommendation generation
+ * Used for: generateRecommendations
+ */
+const RECOMMENDATION_SYSTEM_PROMPT = `You are a Q-methodology expert providing actionable research recommendations.
+
+Based on the study data, provide specific, actionable recommendations in these categories:
+1. Data Collection - improvements to sampling or response collection
+2. Analysis - methodological refinements
+3. Interpretation - guidance for understanding results
+4. Next Steps - future research directions
+
+For each recommendation, include:
+- Clear description of the recommendation
+- Rationale explaining why it's important
+- Specific action items for implementation
+
+Be practical and grounded in research best practices.`;
+
+/**
+ * System prompt for thematic analysis
+ * Used for: performThemeExtraction (AI-powered mode)
+ */
+const THEME_EXTRACTION_SYSTEM_PROMPT = `You are an expert qualitative researcher skilled at thematic analysis.
+
+Your task is to identify key themes from participant responses:
+1. Read through all responses carefully
+2. Identify recurring patterns and concepts
+3. Group related ideas into coherent themes
+4. Provide clear descriptions for each theme
+
+For each theme, include:
+- Name (2-4 words)
+- Description (1-2 sentences)
+- Key quotes that exemplify the theme
+- Keywords associated with the theme
+
+Be systematic and grounded in the data.`;
 
 export interface FactorNarrativeDto {
   factorNumber: number;
@@ -44,16 +108,39 @@ export interface ThemeDto {
 }
 
 /**
+ * Insights summary result
+ * Phase 10.185 Week 2: Added proper typing (no more Promise<any>)
+ */
+export interface InsightsSummaryDto {
+  studyId: string;
+  timestamp: string;
+  summary: {
+    factorsIdentified: number;
+    recommendationsCount: number;
+    biasLevel: string;
+    themesExtracted: number;
+  };
+  narratives: FactorNarrativeDto[];
+  recommendations: RecommendationDto[];
+  biasAnalysis: BiasAnalysisDto;
+  themes: ThemeDto[];
+}
+
+/**
  * Interpretation Service - Phase 7 Day 5
+ * Phase 10.185 Week 2: Migrated to UnifiedAIService
  *
  * Provides AI-powered interpretation capabilities for Q-methodology studies
- * Integrates with OpenAI for narrative generation and insight extraction
+ * Uses UnifiedAIService for cost-optimized AI (Groq FREE → Gemini → OpenAI)
  */
 @Injectable()
 export class InterpretationService {
+  private readonly logger = new Logger(InterpretationService.name);
+
   constructor(
     private readonly prisma: PrismaService,
-    private readonly openaiService: OpenAIService,
+    // Phase 10.185 Week 2: Unified AI Service with Groq FREE → Gemini → OpenAI fallback
+    private readonly aiService: UnifiedAIService,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -91,23 +178,22 @@ export class InterpretationService {
       const prompt = this.buildNarrativePrompt(factor, options);
 
       try {
-        const systemPrompt =
-          'You are an expert Q-methodology researcher skilled at interpreting factor analysis results and creating meaningful narratives.\n\n';
-        const fullPrompt = systemPrompt + prompt;
-        const response = await this.openaiService.generateCompletion(
-          fullPrompt,
-          {
-            temperature: 0.7,
-            maxTokens: 800,
-          },
-        );
+        // Phase 10.185 Week 2: Use UnifiedAIService with system prompt
+        // Provider chain: Groq FREE → Gemini (80% cheaper) → OpenAI
+        const response = await this.aiService.generateCompletion(prompt, {
+          model: 'smart',
+          temperature: 0.7,
+          maxTokens: 800,
+          systemPrompt: FACTOR_NARRATIVE_SYSTEM_PROMPT,
+          cache: true,
+        });
 
         const narrative = this.parseNarrativeResponse(response.content, factor);
         narratives.push(narrative);
-      } catch (error: any) {
-        console.error(
-          `Failed to generate narrative for factor ${factor.number}:`,
-          error,
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `Failed to generate narrative for factor ${factor.number}: ${errMsg}`,
         );
         // Create a fallback narrative
         narratives.push({
@@ -160,12 +246,13 @@ export class InterpretationService {
     const prompt = this.buildRecommendationPrompt(study, options);
 
     try {
-      const systemPrompt =
-        'You are a Q-methodology expert providing actionable research recommendations.\n\n';
-      const fullPrompt = systemPrompt + prompt;
-      const response = await this.openaiService.generateCompletion(fullPrompt, {
+      // Phase 10.185 Week 2: Use UnifiedAIService with recommendation system prompt
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.6,
         maxTokens: 1000,
+        systemPrompt: RECOMMENDATION_SYSTEM_PROMPT,
+        cache: true,
       });
 
       const recommendations = this.parseRecommendationResponse(
@@ -174,8 +261,9 @@ export class InterpretationService {
       const result = { recommendations };
       await this.cacheService.set(cacheKey, result, 3600);
       return result;
-    } catch (error: any) {
-      console.error('Failed to generate recommendations:', error);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to generate recommendations: ${errMsg}`);
       return { recommendations: [] };
     }
   }
@@ -278,8 +366,9 @@ export class InterpretationService {
 
   /**
    * Generate insights summary
+   * Phase 10.185 Week 2: Added proper InsightsSummaryDto return type
    */
-  async generateInsightsSummary(studyId: string): Promise<any> {
+  async generateInsightsSummary(studyId: string): Promise<InsightsSummaryDto> {
     const [narratives, recommendations, biasAnalysis, themes] =
       await Promise.all([
         this.generateFactorNarratives(studyId, { analysisDepth: 'standard' }),
@@ -551,18 +640,16 @@ export class InterpretationService {
 
     if (options.method === 'ai-powered') {
       try {
-        const systemPrompt =
-          'You are an expert qualitative researcher skilled at thematic analysis.\n\n';
         const prompt = `Extract key themes from these Q-methodology participant comments:\n\n${textData.join('\n\n')}\n\nIdentify 3-5 main themes with descriptions.`;
-        const fullPrompt = systemPrompt + prompt;
 
-        const response = await this.openaiService.generateCompletion(
-          fullPrompt,
-          {
-            temperature: 0.6,
-            maxTokens: 800,
-          },
-        );
+        // Phase 10.185 Week 2: Use UnifiedAIService with theme extraction system prompt
+        const response = await this.aiService.generateCompletion(prompt, {
+          model: 'smart',
+          temperature: 0.6,
+          maxTokens: 800,
+          systemPrompt: THEME_EXTRACTION_SYSTEM_PROMPT,
+          cache: true,
+        });
 
         // Parse themes from response
         themes.push({
@@ -573,8 +660,9 @@ export class InterpretationService {
           keywords: ['analysis', 'perspective', 'viewpoint'],
           factors: [1],
         });
-      } catch (error: any) {
-        console.error('Theme extraction failed:', error);
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Theme extraction failed: ${errMsg}`);
       }
     }
 

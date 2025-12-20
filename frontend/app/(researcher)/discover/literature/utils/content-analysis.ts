@@ -115,13 +115,27 @@ export function analyzeContentForExtraction(
     // Determine availability status
     let availabilityStatus: ContentAvailabilityStatus;
 
-    // Categorize paper with Netflix-grade precision
+    // Netflix-Grade Categorization: Prioritize full-text detection over abstract counting
+    // If a paper has both abstract AND hasFullText=true, it should show as "Full-text available"
+    // This ensures accurate counts: papers with abstracts that also have full-text available
+    // are correctly categorized as full-text, not abstracts.
     if (hasFullTextFetched) {
       // READY: Full-text already downloaded
       fullTextCount++;
       availabilityStatus = 'ready';
+    } else if (hasFullTextAvailable) {
+      // AVAILABLE: Full-text detected but not yet fetched
+      // CRITICAL FIX: Check this BEFORE abstract check
+      // Papers with abstracts that also have full-text available should show as "Full-text available"
+      fullTextAvailableCount++;
+      availabilityStatus = 'available';
+      // Still track abstract length for stats (paper has both abstract and full-text available)
+      if (p.abstract) {
+        abstractLengthSum += p.abstract.length;
+      }
     } else if (p.abstract) {
-      // READY: Abstract available from API
+      // READY: Abstract available from API (but NO full-text detection)
+      // Only count as abstract if full-text is NOT available
       const wordCount = p.abstract.trim().split(WORD_SPLIT_REGEX).length;
       if (wordCount >= MIN_ABSTRACT_OVERFLOW_WORDS) {
         abstractOverflowCount++;
@@ -130,11 +144,6 @@ export function analyzeContentForExtraction(
       }
       abstractLengthSum += p.abstract.length;
       availabilityStatus = 'ready';
-    } else if (hasFullTextAvailable) {
-      // AVAILABLE: Full-text detected but not yet fetched
-      // Phase 10.180: This is the critical fix - these papers CAN have content
-      fullTextAvailableCount++;
-      availabilityStatus = 'available';
     } else {
       // UNAVAILABLE: No content source identified
       noContentCount++;

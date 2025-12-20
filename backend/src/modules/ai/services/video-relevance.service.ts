@@ -16,7 +16,28 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { OpenAIService } from './openai.service';
+import { UnifiedAIService } from './unified-ai.service';
+
+// ============================================================================
+// Phase 10.185 Week 3: System Prompts for Video Relevance Scoring
+// ============================================================================
+
+const VIDEO_RELEVANCE_SYSTEM_PROMPT = `You are an expert research video analyst specializing in academic content evaluation.
+
+Your role is to:
+1. Evaluate video relevance to specific research topics
+2. Distinguish between academic and entertainment content
+3. Identify research methodology discussions and empirical findings
+4. Assess educational value for researchers
+5. Prioritize videos with theoretical frameworks and data
+
+Scoring Guidelines:
+- 0-30: Irrelevant (entertainment, unrelated content)
+- 31-60: Tangentially related (mentions topic briefly)
+- 61-80: Moderately relevant (discusses topic in depth)
+- 81-100: Highly relevant (research-focused, methodology, findings)
+
+Output must be valid JSON as specified in the prompt.`;
 
 export interface VideoMetadata {
   videoId: string;
@@ -48,7 +69,7 @@ export class VideoRelevanceService {
     new Map();
   private readonly CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
-  constructor(private readonly openaiService: OpenAIService) {}
+  constructor(private readonly unifiedAIService: UnifiedAIService) {}
 
   /**
    * Score single video relevance
@@ -69,11 +90,12 @@ export class VideoRelevanceService {
     const prompt = this.buildScoringPrompt(video, researchContext);
 
     try {
-      const response = await this.openaiService.generateCompletion(prompt, {
-        model: 'smart', // GPT-4 for accuracy
-        temperature: 0.3, // Lower for consistency
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.3,
         maxTokens: 500,
-        cache: false, // We handle caching ourselves
+        cache: true, // Phase 10.185: Enable UnifiedAIService caching
+        systemPrompt: VIDEO_RELEVANCE_SYSTEM_PROMPT,
       });
 
       const score = this.parseAIResponse(response.content, video.videoId);

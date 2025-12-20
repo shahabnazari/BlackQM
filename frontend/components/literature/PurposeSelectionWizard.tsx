@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock, // Phase 10.180: For "available" status
+  Loader2, // Netflix-Grade: For full-text detection progress
 } from 'lucide-react';
 // TYPE SAFETY: Import ContentType enum for proper type checking
 import { ContentType } from '@/lib/types/content-types';
@@ -111,6 +112,10 @@ interface PurposeSelectionWizardProps {
   onCancel?: () => void;
   initialPurpose?: ResearchPurpose;
   contentAnalysis: ContentAnalysis;
+  /** Netflix-Grade: Full-text detection status for progress indicator */
+  isDetectingFullText?: boolean;
+  detectedCount?: number;
+  totalDetecting?: number;
 }
 
 // ============================================================================
@@ -279,6 +284,9 @@ export default function PurposeSelectionWizard({
   onCancel,
   initialPurpose,
   contentAnalysis,
+  isDetectingFullText = false,
+  detectedCount = 0,
+  totalDetecting = 0,
 }: PurposeSelectionWizardProps) {
   const [step, setStep] = useState<0 | 1 | 2 | 3>(0); // PHASE 10 DAY 5.16: Start at Step 0 (Content Analysis)
   const [selectedPurpose, setSelectedPurpose] =
@@ -380,24 +388,30 @@ export default function PurposeSelectionWizard({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="wizard-title"
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
-        className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl"
+        transition={{ type: 'spring', duration: 0.3, damping: 25 }}
+        className="relative w-full max-w-5xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-900 rounded-2xl shadow-2xl"
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b px-6 py-4">
+        <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 id="wizard-title" className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 {step === 0 && 'Content Analysis'}
                 {step === 1 && 'Select Your Research Goal'}
                 {step === 2 && 'Scientific Backing'}
                 {step === 3 && 'Review & Confirm'}
               </h2>
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                 {step === 0 &&
                   'Review your selected sources and expected extraction quality'}
                 {step === 1 &&
@@ -439,89 +453,171 @@ export default function PurposeSelectionWizard({
                 className="space-y-6"
               >
                 {/* Content Type Breakdown */}
-                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
                     <Info className="w-5 h-5 text-blue-600" />
                     Selected Sources Analysis
                   </h3>
 
-                  {/* Phase 10.180: Dynamic grid based on content categories */}
+                  {/* Netflix-Grade: Show all categories with accurate counts */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                     {/* READY: Full-text fetched */}
-                    {contentAnalysis.fullTextCount > 0 && (
-                      <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-green-700">
-                          {contentAnalysis.fullTextCount}
-                        </div>
-                        <div className="text-xs text-green-600 mt-1">
-                          Full-text ready
-                        </div>
-                        <div className="text-xs text-green-500 mt-0.5">
-                          ✓ ~8,500 words
-                        </div>
+                    <div className={`border-2 rounded-lg p-3 text-center ${
+                      contentAnalysis.fullTextCount > 0 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'bg-gray-50 border-gray-200 opacity-50'
+                    }`}>
+                      <div className={`text-2xl font-bold ${
+                        contentAnalysis.fullTextCount > 0 ? 'text-green-700' : 'text-gray-400'
+                      }`}>
+                        {contentAnalysis.fullTextCount}
                       </div>
-                    )}
+                      <div className={`text-xs mt-1 ${
+                        contentAnalysis.fullTextCount > 0 ? 'text-green-600' : 'text-gray-500'
+                      }`}>
+                        Full-text ready
+                      </div>
+                      <div className={`text-xs mt-0.5 ${
+                        contentAnalysis.fullTextCount > 0 ? 'text-green-500' : 'text-gray-400'
+                      }`}>
+                        {contentAnalysis.fullTextCount > 0 ? '✓ Already fetched' : 'None fetched'}
+                      </div>
+                    </div>
 
                     {/* AVAILABLE: Full-text detected but not yet fetched */}
-                    {contentAnalysis.fullTextAvailableCount > 0 && (
-                      <div className="bg-amber-50 border-2 border-amber-300 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-amber-700">
-                          {contentAnalysis.fullTextAvailableCount}
-                        </div>
-                        <div className="text-xs text-amber-600 mt-1">
-                          Full-text available
-                        </div>
-                        <div className="text-xs text-amber-500 mt-0.5">
-                          ⏳ Will be fetched
-                        </div>
+                    <div className={`border-2 rounded-lg p-3 text-center ${
+                      contentAnalysis.fullTextAvailableCount > 0 
+                        ? 'bg-amber-50 border-amber-300' 
+                        : 'bg-gray-50 border-gray-200 opacity-50'
+                    }`}>
+                      <div className={`text-2xl font-bold ${
+                        contentAnalysis.fullTextAvailableCount > 0 ? 'text-amber-700' : 'text-gray-400'
+                      }`}>
+                        {contentAnalysis.fullTextAvailableCount}
                       </div>
-                    )}
+                      <div className={`text-xs mt-1 ${
+                        contentAnalysis.fullTextAvailableCount > 0 ? 'text-amber-600' : 'text-gray-500'
+                      }`}>
+                        Full-text available
+                      </div>
+                      <div className={`text-xs mt-0.5 ${
+                        contentAnalysis.fullTextAvailableCount > 0 ? 'text-amber-500' : 'text-gray-400'
+                      }`}>
+                        {contentAnalysis.fullTextAvailableCount > 0 ? '⏳ Will be fetched' : 'None detected'}
+                      </div>
+                    </div>
 
-                    {/* READY: Extended abstracts */}
-                    {contentAnalysis.abstractOverflowCount > 0 && (
-                      <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-purple-700">
-                          {contentAnalysis.abstractOverflowCount}
-                        </div>
-                        <div className="text-xs text-purple-600 mt-1">
-                          Extended abstracts
-                        </div>
-                        <div className="text-xs text-purple-500 mt-0.5">
-                          ✓ 250+ words
-                        </div>
+                    {/* READY: Abstracts (combined extended + standard) */}
+                    <div className={`border-2 rounded-lg p-3 text-center ${
+                      (contentAnalysis.abstractOverflowCount + contentAnalysis.abstractCount) > 0 
+                        ? 'bg-blue-50 border-blue-200' 
+                        : 'bg-gray-50 border-gray-200 opacity-50'
+                    }`}>
+                      <div className={`text-2xl font-bold ${
+                        (contentAnalysis.abstractOverflowCount + contentAnalysis.abstractCount) > 0 
+                          ? 'text-blue-700' 
+                          : 'text-gray-400'
+                      }`}>
+                        {contentAnalysis.abstractOverflowCount + contentAnalysis.abstractCount}
                       </div>
-                    )}
-
-                    {/* READY: Standard abstracts */}
-                    {contentAnalysis.abstractCount > 0 && (
-                      <div className="bg-gray-50 border-2 border-gray-200 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-gray-700">
-                          {contentAnalysis.abstractCount}
-                        </div>
-                        <div className="text-xs text-gray-600 mt-1">
-                          Standard abstracts
-                        </div>
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          ✓ &lt;250 words
-                        </div>
+                      <div className={`text-xs mt-1 ${
+                        (contentAnalysis.abstractOverflowCount + contentAnalysis.abstractCount) > 0 
+                          ? 'text-blue-600' 
+                          : 'text-gray-500'
+                      }`}>
+                        Abstracts ready
                       </div>
-                    )}
+                      <div className={`text-xs mt-0.5 ${
+                        (contentAnalysis.abstractOverflowCount + contentAnalysis.abstractCount) > 0 
+                          ? 'text-blue-500' 
+                          : 'text-gray-400'
+                      }`}>
+                        {(contentAnalysis.abstractOverflowCount + contentAnalysis.abstractCount) > 0 
+                          ? '✓ Already fetched' 
+                          : 'None available'}
+                      </div>
+                    </div>
 
                     {/* UNAVAILABLE: No content detected */}
-                    {contentAnalysis.noContentCount > 0 && (
-                      <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-red-700">
-                          {contentAnalysis.noContentCount}
-                        </div>
-                        <div className="text-xs text-red-600 mt-1">
-                          No content
-                        </div>
-                        <div className="text-xs text-red-500 mt-0.5">
-                          ✗ Will be skipped
-                        </div>
+                    <div className={`border-2 rounded-lg p-3 text-center ${
+                      contentAnalysis.noContentCount > 0 
+                        ? 'bg-red-50 border-red-200' 
+                        : 'bg-gray-50 border-gray-200 opacity-50'
+                    }`}>
+                      <div className={`text-2xl font-bold ${
+                        contentAnalysis.noContentCount > 0 ? 'text-red-700' : 'text-gray-400'
+                      }`}>
+                        {contentAnalysis.noContentCount}
+                      </div>
+                      <div className={`text-xs mt-1 ${
+                        contentAnalysis.noContentCount > 0 ? 'text-red-600' : 'text-gray-500'
+                      }`}>
+                        No content
+                      </div>
+                      <div className={`text-xs mt-0.5 ${
+                        contentAnalysis.noContentCount > 0 ? 'text-red-500' : 'text-gray-400'
+                      }`}>
+                        {contentAnalysis.noContentCount > 0 ? '✗ Will be skipped' : 'None'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Netflix-Grade: Total verification */}
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mb-4">
+                    <div className="text-sm text-gray-700 text-center">
+                      <strong>Total: {contentAnalysis.totalSelected} papers</strong>
+                      {' • '}
+                      <span className="text-green-600">
+                        {contentAnalysis.fullTextCount + contentAnalysis.fullTextAvailableCount} with full-text
+                      </span>
+                      {' • '}
+                      <span className="text-blue-600">
+                        {contentAnalysis.abstractOverflowCount + contentAnalysis.abstractCount} with abstracts only
+                      </span>
+                      {contentAnalysis.noContentCount > 0 && (
+                        <>
+                          {' • '}
+                          <span className="text-red-600">
+                            {contentAnalysis.noContentCount} skipped
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {/* Netflix-Grade: Detection status indicator */}
+                    {isDetectingFullText && (
+                      <div className="mt-2 text-xs text-amber-600 text-center flex items-center justify-center gap-2">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>Detecting full-text availability... ({detectedCount}/{totalDetecting})</span>
                       </div>
                     )}
                   </div>
+
+                  {/* Netflix-Grade: Full-text detection explanation */}
+                  {contentAnalysis.fullTextAvailableCount === 0 && contentAnalysis.fullTextCount === 0 && (
+                    <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 mb-4">
+                      <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-amber-900 mb-2">
+                            ℹ️ Full-Text Detection Status
+                          </h4>
+                          <p className="text-sm text-amber-800 leading-relaxed mb-2">
+                            <strong>Full-text detection runs automatically during search</strong> using our 7-tier detection system. 
+                            If you see 0 full-texts available, it typically means:
+                          </p>
+                          <ul className="text-xs text-amber-700 list-disc list-inside space-y-1 mb-2 ml-2">
+                            <li>Detection ran but no full-text sources were found (papers may be behind paywalls)</li>
+                            <li>Papers were saved before detection ran (detection happens during search, not when saving)</li>
+                            <li>Detection priority was set to 'low' (skips full-text detection for performance)</li>
+                          </ul>
+                          <p className="text-xs text-amber-600 italic mt-2">
+                            💡 <strong>Note:</strong> Papers with abstracts often have full-text available. 
+                            The system will attempt to fetch full-text automatically during theme extraction if sources become available.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Phase 10.180: Full-Text Detection Information */}
                   {contentAnalysis.noContentCount > 0 && (
@@ -838,37 +934,38 @@ export default function PurposeSelectionWizard({
                     <motion.button
                       key={config.id}
                       onClick={() => handlePurposeClick(config.id)}
-                      className={`w-full text-left p-6 rounded-lg border-2 transition-all ${config.borderColor} ${config.bgColor} hover:shadow-lg group`}
+                      className={`w-full text-left p-6 rounded-lg border-2 transition-all ${config.borderColor} ${config.bgColor} hover:shadow-lg group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900`}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
+                      aria-label={`Select ${config.title} purpose`}
                     >
                       <div className="flex items-start gap-4">
                         <div
-                          className={`p-3 rounded-lg bg-white shadow-sm ${config.color}`}
+                          className={`p-3 rounded-lg bg-white dark:bg-gray-800 shadow-sm ${config.color}`}
                         >
                           <Icon className="w-6 h-6" />
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                               {config.title}
                             </h3>
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                               <span className="font-mono">
                                 {config.targetThemeCount.min}-
                                 {config.targetThemeCount.max} themes
                               </span>
-                              <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                              <ChevronRight className="w-5 h-5 text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors" />
                             </div>
                           </div>
-                          <p className="text-gray-700 mt-2">
+                          <p className="text-gray-700 dark:text-gray-300 mt-2">
                             {config.description}
                           </p>
                           <div className="flex items-center gap-2 mt-3">
-                            <span className="text-xs px-2 py-1 rounded bg-white text-gray-600 font-medium">
+                            <span className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium">
                               Focus: {config.extractionFocus}
                             </span>
-                            <span className="text-xs px-2 py-1 rounded bg-white text-gray-600 font-medium">
+                            <span className="text-xs px-2 py-1 rounded bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 font-medium">
                               Granularity: {config.themeGranularity}
                             </span>
                           </div>
@@ -1168,12 +1265,12 @@ export default function PurposeSelectionWizard({
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 bg-white border-t px-6 py-4 flex items-center justify-between">
+        <div className="sticky bottom-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 px-6 py-4 flex items-center justify-between shadow-sm">
           <div>
             {step > 0 && (
               <button
                 onClick={handleBack}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
               >
                 <ArrowLeft className="w-4 h-4" />
                 Back
@@ -1184,7 +1281,7 @@ export default function PurposeSelectionWizard({
             {onCancel && (
               <button
                 onClick={onCancel}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 transition-colors"
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-lg"
               >
                 Cancel
               </button>
@@ -1192,7 +1289,7 @@ export default function PurposeSelectionWizard({
             {step === 0 && (
               <button
                 onClick={handleContinueToPurposeSelection}
-                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="flex items-center gap-2 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 Next: Choose Research Purpose
                 <ChevronRight className="w-4 h-4" />
@@ -1202,10 +1299,10 @@ export default function PurposeSelectionWizard({
               <button
                 onClick={handleContinueToPreview}
                 disabled={validationStatus?.isBlocking}
-                className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors font-medium ${
+                className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                   validationStatus?.isBlocking
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed focus:ring-gray-400'
+                    : 'bg-blue-600 dark:bg-blue-500 text-white hover:bg-blue-700 dark:hover:bg-blue-600 focus:ring-blue-500'
                 }`}
                 title={
                   validationStatus?.isBlocking
@@ -1221,10 +1318,10 @@ export default function PurposeSelectionWizard({
               <button
                 onClick={handleConfirm}
                 disabled={validationStatus?.isBlocking}
-                className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors font-medium ${
+                className={`flex items-center gap-2 px-6 py-2 rounded-lg transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                   validationStatus?.isBlocking
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700'
+                    ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed focus:ring-gray-400'
+                    : 'bg-green-600 dark:bg-green-500 text-white hover:bg-green-700 dark:hover:bg-green-600 focus:ring-green-500'
                 }`}
                 title={
                   validationStatus?.isBlocking

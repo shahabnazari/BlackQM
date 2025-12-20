@@ -82,6 +82,11 @@ import {
 // Phase 10.170 Week 4: Gap #2 Fix - TwoStageFilter Integration
 import { TwoStageFilterService } from './two-stage-filter.service';
 import { PaperForFilter } from '../types/specialized-pipeline.types';
+// Phase 10.197: Zero-Debt Full-Text Utilities
+import {
+  isPaperWithFullText,
+  normalizeFullTextStatus,
+} from '../utils/fulltext-availability.util';
 
 /**
  * Query domain for domain-aware processing
@@ -1084,6 +1089,29 @@ export class SearchPipelineService {
             `(purpose: ${config.purpose}, strictRequirement: true)`
           );
         }
+
+        // Phase 10.197: ACTUAL FILTERING when strictRequirement is true
+        // Filter to only include papers with confirmed full-text availability
+        // This ensures analysis pipelines (theme extraction, synthesis, hypothesis) get usable papers
+        // Zero-debt: Uses centralized utility for consistent checking across app
+        const beforeFilterCount = mutablePapers.length;
+        mutablePapers = mutablePapers.filter(isPaperWithFullText);
+
+        const afterFilterCount = mutablePapers.length;
+        const filteredOut = beforeFilterCount - afterFilterCount;
+
+        if (filteredOut > 0) {
+          this.logger.log(
+            `📋 [Stage 9] Full-text filter applied: ${beforeFilterCount} → ${afterFilterCount} papers ` +
+            `(removed ${filteredOut} papers without full-text, purpose: ${config.purpose})`
+          );
+
+          // Emit progress event for frontend
+          config.emitProgress?.(
+            `Filtered to ${afterFilterCount} papers with full-text (${filteredOut} abstract-only removed)`,
+            85
+          );
+        }
       }
     }
 
@@ -1096,6 +1124,12 @@ export class SearchPipelineService {
         config.targetPaperCount,
         config.emitProgress,
       );
+    }
+
+    // Phase 10.197: Zero-debt - Normalize all fullTextStatus before returning
+    // Ensures every paper has a valid status and hasFullText is in sync
+    for (const paper of mutablePapers) {
+      normalizeFullTextStatus(paper as Paper);
     }
 
     // Performance report
@@ -2250,9 +2284,27 @@ export class SearchPipelineService {
             paper.pdfUrl = result.primaryUrl;
           }
 
-          // Mark full-text as available if detected with high confidence
-          if (result.confidence === 'high' || result.confidence === 'ai_verified') {
-            highConfidenceCount++;
+          // Phase 10.195: A+ Netflix-Grade confidence acceptance
+          // Accept results based on both confidence level AND numeric score:
+          // - High confidence: Direct URL, PMC pattern, AI verified (always accept)
+          // - Medium confidence: Unpaywall API, Publisher HTML (always accept)
+          // - Low confidence with high score (>= 0.7): Secondary PDF links with reliable URLs
+          //
+          // This ensures we don't miss valid PDFs found via secondary scanning
+          // that were incorrectly marked as "low" confidence due to conservative defaults
+          const isHighConfidence = result.confidence === 'high' || result.confidence === 'ai_verified';
+          const isMediumConfidence = result.confidence === 'medium';
+          // Phase 10.195: Accept low confidence results if they have a high numeric score
+          // This catches Tier 6 PDF links that were missed by the old conservative logic
+          const isLowConfidenceWithHighScore =
+            result.confidence === 'low' &&
+            result.confidenceScore !== undefined &&
+            result.confidenceScore >= 0.7;
+
+          if (isHighConfidence || isMediumConfidence || isLowConfidenceWithHighScore) {
+            if (isHighConfidence) {
+              highConfidenceCount++;
+            }
             paper.hasFullText = true;
 
             // Phase 10.170 Week 2 Audit: Apply fullTextBoost to quality score
@@ -2265,8 +2317,10 @@ export class SearchPipelineService {
               );
             }
 
+            // Phase 10.197: Set status to 'available' when detection succeeds
+            // This ensures semantic consistency: hasFullText=true → fullTextStatus='available'
             if (!paper.fullTextStatus || paper.fullTextStatus === 'not_fetched') {
-              paper.fullTextStatus = 'not_fetched'; // Ready to fetch
+              paper.fullTextStatus = 'available';
             }
 
             // Map detection source to fullTextSource (only valid Paper.fullTextSource values)

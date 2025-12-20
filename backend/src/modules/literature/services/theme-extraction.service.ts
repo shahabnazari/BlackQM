@@ -1,6 +1,6 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
-import { OpenAIService } from '../../ai/services/openai.service';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { StatementGeneratorService } from '../../ai/services/statement-generator.service';
 import { CitationControversyService } from './citation-controversy.service';
 import {
@@ -125,6 +125,66 @@ const CONTROVERSY_CONFIG = {
   MAX_AUTHORS_PER_VIEWPOINT: 10,
 } as const;
 
+// =============================================================================
+// Phase 10.185: System Prompts for UnifiedAIService Migration
+// =============================================================================
+
+/**
+ * System prompt for theme extraction AI calls
+ * Used to establish context for extracting research themes from papers
+ */
+const THEME_EXTRACTION_SYSTEM_PROMPT = `You are an expert research theme analyzer specializing in academic literature synthesis.
+Your task is to identify and extract major research themes from academic papers.
+
+Guidelines:
+- Extract distinct, non-overlapping themes
+- Use academic, precise language for theme labels
+- Consider methodological and theoretical dimensions
+- Identify connections between papers
+- Return valid JSON arrays only
+- Be concise but comprehensive`;
+
+/**
+ * System prompt for stance/controversy analysis
+ * Used to detect polarization and opposing viewpoints in research
+ */
+const STANCE_ANALYSIS_SYSTEM_PROMPT = `You are an expert in academic discourse analysis, specializing in identifying research debates and controversies.
+Your task is to analyze research papers for stance polarization and opposing viewpoints.
+
+Guidelines:
+- Identify clear opposing positions when they exist
+- Be objective and evidence-based
+- Consider methodological disagreements
+- Recognize nuanced positions, not just binary oppositions
+- Return valid JSON only`;
+
+/**
+ * System prompt for statement generation
+ * Used to generate balanced Q-methodology statements
+ */
+const STATEMENT_GENERATION_SYSTEM_PROMPT = `You are an expert in Q-methodology statement design.
+Your task is to generate clear, neutral statements suitable for Q-sorting exercises.
+
+Guidelines:
+- Statements should be clear and unambiguous
+- Avoid leading language
+- Allow participants to project their own views
+- Suitable for agree/disagree sorting
+- Maximum 100 characters per statement`;
+
+/**
+ * System prompt for citation pattern analysis
+ * Used to analyze citation patterns for controversy detection
+ */
+const CITATION_ANALYSIS_SYSTEM_PROMPT = `You are an expert in bibliometric analysis and citation pattern interpretation.
+Your task is to analyze citation patterns to identify consensus, debate, or polarization in research topics.
+
+Guidelines:
+- Identify citation clustering patterns
+- Detect self-citation vs cross-camp citation
+- Classify as consensus, debate, or polarized
+- Return valid JSON only`;
+
 /**
  * Phase 10.113: Thematization Tier Configuration
  * Configurable paper counts with pricing multipliers
@@ -170,7 +230,7 @@ export class ThemeExtractionService {
 
   constructor(
     private prisma: PrismaService,
-    private openAIService: OpenAIService,
+    private unifiedAIService: UnifiedAIService,
     private statementGeneratorService: StatementGeneratorService,
     private citationControversyService: CitationControversyService,
   ) {}
@@ -411,12 +471,14 @@ export class ThemeExtractionService {
         : prompt;
 
     try {
+      // Phase 10.185: Add system prompt for better context
       const response = await this.retryWithBackoff(async () => {
-        return await this.openAIService.generateCompletion(truncatedPrompt, {
+        return await this.unifiedAIService.generateCompletion(truncatedPrompt, {
           model: 'smart',
           temperature: 0.4,
           maxTokens: 1500,
           cache: true,
+          systemPrompt: THEME_EXTRACTION_SYSTEM_PROMPT,
         });
       });
 
@@ -596,12 +658,14 @@ export class ThemeExtractionService {
       IMPORTANT: Return valid JSON only. Maximum 8 themes.
     `;
 
+    // Phase 10.185: Add system prompt for chunked extraction
     const response = await this.retryWithBackoff(async () => {
-      return await this.openAIService.generateCompletion(prompt, {
+      return await this.unifiedAIService.generateCompletion(prompt, {
         model: 'smart',
         temperature: 0.4,
         maxTokens: 1500,
         cache: true,
+        systemPrompt: THEME_EXTRACTION_SYSTEM_PROMPT,
       });
     });
 
@@ -1370,10 +1434,13 @@ export class ThemeExtractionService {
         `;
 
         try {
-          const response = await this.openAIService.generateCompletion(prompt, {
+          // Phase 10.185: Add system prompt and caching for citation analysis
+          const response = await this.unifiedAIService.generateCompletion(prompt, {
             model: 'fast',
             temperature: 0.3,
             maxTokens: 200,
+            cache: true,
+            systemPrompt: CITATION_ANALYSIS_SYSTEM_PROMPT,
           });
 
           const analysis = JSON.parse(response.content);
@@ -1474,12 +1541,14 @@ export class ThemeExtractionService {
     `;
 
     try {
+      // Phase 10.185: Add system prompt for statement generation
       const response = await this.retryWithBackoff(async () => {
-        return await this.openAIService.generateCompletion(prompt, {
+        return await this.unifiedAIService.generateCompletion(prompt, {
           model: 'smart',
           temperature: 0.7,
           maxTokens: 150,
           cache: true,
+          systemPrompt: STATEMENT_GENERATION_SYSTEM_PROMPT,
         });
       });
 
@@ -1523,10 +1592,13 @@ export class ThemeExtractionService {
       The statement should be clear and suitable for Q-sorting.
     `;
 
-    const response = await this.openAIService.generateCompletion(prompt, {
+    // Phase 10.185: Add system prompt and caching for perspective statement
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
       model: 'smart',
       temperature: 0.7,
       maxTokens: 150,
+      cache: true,
+      systemPrompt: STATEMENT_GENERATION_SYSTEM_PROMPT,
     });
     const statement = response.content;
 
@@ -1828,10 +1900,13 @@ export class ThemeExtractionService {
     `;
 
     try {
-      const response = await this.openAIService.generateCompletion(prompt, {
+      // Phase 10.185: Add caching for theme label generation
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'fast',
         temperature: 0.3,
         maxTokens: 50,
+        cache: true,
+        systemPrompt: THEME_EXTRACTION_SYSTEM_PROMPT,
       });
       return (
         response.content.trim() ||
@@ -1863,10 +1938,13 @@ export class ThemeExtractionService {
     `;
 
     try {
-      const response = await this.openAIService.generateCompletion(prompt, {
+      // Phase 10.185: Add caching for theme description generation
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'fast',
         temperature: 0.5,
         maxTokens: 100,
+        cache: true,
+        systemPrompt: THEME_EXTRACTION_SYSTEM_PROMPT,
       });
       return (
         response.content.trim() ||
@@ -1925,10 +2003,13 @@ export class ThemeExtractionService {
     `;
 
     try {
-      const response = await this.openAIService.generateCompletion(prompt, {
+      // Phase 10.185: Add caching for stance analysis
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'smart',
         temperature: 0.3,
         maxTokens: 800,
+        cache: true,
+        systemPrompt: STANCE_ANALYSIS_SYSTEM_PROMPT,
       });
 
       const analysis = JSON.parse(response.content);

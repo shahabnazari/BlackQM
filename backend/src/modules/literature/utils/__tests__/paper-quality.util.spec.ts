@@ -1,6 +1,7 @@
 /**
  * Paper Quality Scoring Tests
  * Phase 10.942 Day 5 - Testing & Validation
+ * Phase 10.185: Netflix-Grade - Added Vitest imports for ESM compatibility
  *
  * Tests for v4.0 Quality Scoring:
  * - 30% Citation Impact (FWCI)
@@ -9,6 +10,7 @@
  * - Optional Bonuses (+10 OA, +5 Data/Code, +5 Altmetric)
  */
 
+import { describe, it, expect } from 'vitest';
 import { calculateQualityScore, calculateRecencyBoost } from '../paper-quality.util';
 
 // ============================================================================

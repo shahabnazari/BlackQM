@@ -376,6 +376,16 @@ export interface StreamingSearchOptions {
    * Affects quality weights, paper limits, and full-text requirements
    */
   purpose?: ResearchPurpose;
+  /**
+   * Phase 10.195: Only return papers with full-text available
+   * When true, filters out papers without hasFullText=true
+   */
+  hasFullTextOnly?: boolean;
+  /**
+   * Phase 10.195: Exclude books and book chapters from results
+   * When true, filters out books, handbooks, encyclopedias, etc.
+   */
+  excludeBooks?: boolean;
 }
 
 // ============================================================================

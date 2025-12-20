@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { PrismaService } from '../../../common/prisma.service';
 
 /**
@@ -90,22 +89,12 @@ export interface HypothesisGenerationRequest {
 @Injectable()
 export class HypothesisGeneratorService {
   private readonly logger = new Logger(HypothesisGeneratorService.name);
-  private openai!: OpenAI;
   private hypothesisCache = new Map<string, GeneratedHypothesis[]>();
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService,
-  ) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-    if (!apiKey) {
-      this.logger.warn(
-        'OPENAI_API_KEY not configured - AI features will be limited',
-      );
-    } else {
-      this.openai = new OpenAI({ apiKey });
-    }
-  }
+    private unifiedAIService: UnifiedAIService,
+  ) {}
 
   /**
    * Main method: Generate hypotheses from literature contradictions, gaps, and trends
@@ -185,10 +174,6 @@ export class HypothesisGeneratorService {
     contradictions: any[],
     papers: any[],
   ): Promise<GeneratedHypothesis[]> {
-    if (!this.openai) {
-      return [];
-    }
-
     const prompt = `Generate research hypotheses from contradicting findings in the literature.
 
 Research Question: "${researchQuestion}"
@@ -232,21 +217,15 @@ Return JSON: {
 }`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert research methodologist specializing in hypothesis development. Generate clear, testable hypotheses.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for hypothesis generation
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.6,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert research methodologist specializing in hypothesis development. Generate clear, testable hypotheses.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.content;
       if (!content) {
         return [];
       }
@@ -285,10 +264,6 @@ Return JSON: {
     gaps: any[],
     themes: any[],
   ): Promise<GeneratedHypothesis[]> {
-    if (!this.openai) {
-      return [];
-    }
-
     const prompt = `Generate exploratory research hypotheses from identified research gaps.
 
 Research Question: "${researchQuestion}"
@@ -320,21 +295,15 @@ For each gap, generate exploratory hypotheses that:
 Return JSON with same structure as before.`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert at identifying novel research directions from literature gaps.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for gap hypothesis generation
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.7,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert at identifying novel research directions from literature gaps.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.content;
       if (!content) {
         return [];
       }
@@ -369,10 +338,6 @@ Return JSON with same structure as before.`;
     trends: any[],
     papers: any[],
   ): Promise<GeneratedHypothesis[]> {
-    if (!this.openai) {
-      return [];
-    }
-
     const prompt = `Generate predictive hypotheses from emerging trends in the literature.
 
 Research Question: "${researchQuestion}"
@@ -394,21 +359,15 @@ Generate hypotheses that predict future developments based on current trends.
 Return JSON with same structure as before.`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert at identifying future research directions from emerging trends.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for trend hypothesis generation
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.7,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert at identifying future research directions from emerging trends.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.content;
       if (!content) {
         return [];
       }
@@ -445,10 +404,6 @@ Return JSON with same structure as before.`;
     themes: any[],
     knowledgeGraphData?: any,
   ): Promise<TheoryDiagram> {
-    if (!this.openai) {
-      return { constructs: [], relationships: [] };
-    }
-
     const prompt = `Build a conceptual framework diagram from the identified themes.
 
 Research Question: "${researchQuestion}"
@@ -489,21 +444,15 @@ Return JSON: {
 }`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert at building conceptual frameworks and theoretical models.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for theory diagram generation
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.5,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert at building conceptual frameworks and theoretical models.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.content;
       if (!content) {
         return { constructs: [], relationships: [] };
       }
@@ -551,10 +500,6 @@ Return JSON: {
     hypotheses: GeneratedHypothesis[],
     themes: any[],
   ): Promise<MethodologyRecommendation> {
-    if (!this.openai) {
-      return this.getFallbackMethodologyRecommendation();
-    }
-
     const prompt = `Evaluate the suitability of Q-methodology for this research question.
 
 Research Question: "${researchQuestion}"
@@ -592,21 +537,15 @@ Return JSON: {
 }`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert research methodologist specializing in Q-methodology and mixed methods.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for methodology recommendation
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.4,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert research methodologist specializing in Q-methodology and mixed methods.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.content;
       if (!content) {
         return this.getFallbackMethodologyRecommendation();
       }

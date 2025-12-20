@@ -266,7 +266,7 @@ export function ModeSelectionModal({
               {/* Guided Extraction Card - FLAGSHIP */}
               <motion.button
                 onClick={() => setSelectedMode('guided')}
-                className={`relative text-left p-6 rounded-xl border-3 transition-all ${
+                className={`relative text-left p-6 rounded-xl border-2 transition-all ${
                   selectedMode === 'guided'
                     ? 'border-pink-500 bg-gradient-to-br from-purple-50 via-pink-50 to-purple-50 shadow-2xl scale-[1.04]'
                     : 'border-pink-300 bg-gradient-to-br from-purple-50/50 to-pink-50/50 hover:border-pink-400 hover:shadow-xl'

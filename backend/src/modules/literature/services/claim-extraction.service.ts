@@ -16,7 +16,9 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { OpenAIService } from '../../ai/services/openai.service';
+// Phase 10.185: Migrated from OpenAIService to UnifiedAIService
+// Benefits: Groq FREE tier first, 80% cost reduction with Gemini fallback
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { LocalEmbeddingService } from './local-embedding.service';
 import {
   ClaimExtractionConfig,
@@ -214,12 +216,38 @@ const NON_SORTABLE_PATTERNS = [
 // SERVICE IMPLEMENTATION
 // ============================================================================
 
+/**
+ * Phase 10.185: System prompt for claim extraction AI
+ * Netflix-grade: Consistent, high-quality extraction behavior
+ */
+const CLAIM_EXTRACTION_SYSTEM_PROMPT = `You are an expert Q-methodology researcher specializing in extracting claims from academic literature. Your task is to identify and extract claims that can be used in Q-sort exercises.
+
+CRITICAL REQUIREMENTS:
+1. Claims must express a clear position or finding (not just describe methodology)
+2. Claims must be sortable on an agree-disagree scale
+3. Claims should be concise and self-contained (8-20 words optimal)
+4. Preserve academic tone while ensuring clarity
+5. Output ONLY valid JSON - no markdown, no explanation, no commentary
+
+You are precise, consistent, and always follow the exact output format requested.`;
+
+/**
+ * Phase 10.185: System prompt for perspective classification AI
+ */
+const PERSPECTIVE_CLASSIFICATION_SYSTEM_PROMPT = `You are an expert in analyzing academic claims and classifying their perspective stance. You classify claims into three categories:
+- "supportive": Claims that support, validate, promote, or show benefits of the topic
+- "critical": Claims that challenge, critique, question, or show concerns about the topic
+- "neutral": Claims that describe, observe, or analyze without taking a position
+
+Output ONLY valid JSON arrays - no markdown, no explanation.`;
+
 @Injectable()
 export class ClaimExtractionService {
   private readonly logger = new Logger(ClaimExtractionService.name);
 
   constructor(
-    private readonly openAIService: OpenAIService,
+    // Phase 10.185: Unified AI Service with Groq FREE → Gemini → OpenAI fallback
+    private readonly aiService: UnifiedAIService,
     private readonly embeddingService: LocalEmbeddingService,
   ) {}
 
@@ -511,10 +539,14 @@ FORMAT (JSON array):
 Return ONLY the JSON array, no other text.`;
 
     try {
-      const response = await this.openAIService.generateCompletion(prompt, {
+      // Phase 10.185: Use UnifiedAIService with system prompt
+      // Provider chain: Groq FREE → Gemini (80% cheaper) → OpenAI
+      const response = await this.aiService.generateCompletion(prompt, {
         model: 'smart',
         temperature: EXTRACTION_TEMPERATURE,
         maxTokens: EXTRACTION_MAX_TOKENS,
+        systemPrompt: CLAIM_EXTRACTION_SYSTEM_PROMPT,
+        cache: true, // Enable response caching for repeated similar prompts
       });
 
       const parsed = this.parseExtractionResponse(response.content);
@@ -941,10 +973,14 @@ FORMAT (JSON array of perspectives in order):
 Return ONLY the JSON array.`;
 
     try {
-      const response = await this.openAIService.generateCompletion(prompt, {
+      // Phase 10.185: Use UnifiedAIService with system prompt
+      // Classification uses 'fast' model for cost efficiency
+      const response = await this.aiService.generateCompletion(prompt, {
         model: 'fast',
         temperature: CLASSIFICATION_TEMPERATURE,
         maxTokens: CLASSIFICATION_MAX_TOKENS,
+        systemPrompt: PERSPECTIVE_CLASSIFICATION_SYSTEM_PROMPT,
+        cache: true, // Enable response caching
       });
 
       const perspectives = this.parseClassificationResponse(response.content);

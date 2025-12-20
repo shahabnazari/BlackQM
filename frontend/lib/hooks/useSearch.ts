@@ -108,8 +108,9 @@ export function useSearch(): UseSearchReturn {
         page: currentPage,
         limit: 20,
         includeCitations: true,
-        // Phase 10.942: Removed minAbstractLength - quality scoring handles paper ranking
-        // Word/abstract filters are OPTIONAL and user-configurable, not hardcoded defaults
+        // Phase 10.195: Advanced Research Filters
+        ...(appliedFilters.hasFullTextOnly && { hasFullTextOnly: true }),
+        ...(appliedFilters.excludeBooks && { excludeBooks: true }),
       };
 
       logger.debug('[useSearch] Search params:', searchParams);

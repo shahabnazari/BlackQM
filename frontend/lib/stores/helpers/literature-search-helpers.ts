@@ -121,11 +121,35 @@ export interface SearchMetadata {
  * Defensive deduplication utility
  * Prevents duplicate React keys even if backend deduplication fails
  *
+ * Phase 10.195: A+ Netflix-Grade - Reference equality optimization
+ * Returns SAME array reference if no duplicates found, preventing
+ * unnecessary React re-renders in useMemo/useEffect dependencies.
+ *
  * @param papers - Array of papers that may contain duplicates
- * @returns Deduplicated array (duplicates logged)
+ * @returns Deduplicated array (same reference if no duplicates)
  */
 export function deduplicatePapersByID(papers: Paper[]): Paper[] {
+  // Phase 10.195: Quick check for duplicates before creating new array
+  // This prevents unnecessary re-renders when papers array is updated
+  // but contains no duplicates (common case)
   const seenIds = new Set<string>();
+  let hasDuplicates = false;
+
+  for (const paper of papers) {
+    if (seenIds.has(paper.id)) {
+      hasDuplicates = true;
+      break;
+    }
+    seenIds.add(paper.id);
+  }
+
+  // If no duplicates, return SAME reference to prevent re-renders
+  if (!hasDuplicates) {
+    return papers;
+  }
+
+  // Only create new array if duplicates exist
+  seenIds.clear();
   return papers.filter((paper) => {
     if (seenIds.has(paper.id)) {
       logger.warn(
@@ -330,6 +354,10 @@ export const createFilterSlice = (
     if (appliedFilters.publicationType !== 'all') count++;
     if (appliedFilters.sortBy !== 'relevance') count++;
     if (appliedFilters.author && appliedFilters.author.trim().length > 0) count++;
+    // Phase 10.201: A+ Netflix-Grade - Consistent filter counting
+    // Both filters count when CHANGED from defaults (uniform user mental model)
+    if (appliedFilters.hasFullTextOnly !== defaultFilters.hasFullTextOnly) count++;
+    if (appliedFilters.excludeBooks !== defaultFilters.excludeBooks) count++;
     return count;
   },
 });

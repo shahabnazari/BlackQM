@@ -106,6 +106,43 @@ export class APIQuotaMonitorService {
         blockingThreshold: 0.8, // 80%
       },
     ],
+    // Phase 10.195: CORE API rate limiting (CRITICAL - was missing!)
+    // CORE API: 10 req/sec with API key, 1 req/10sec without
+    // Using conservative limits to prevent 429 errors
+    [
+      'core',
+      {
+        name: 'CORE',
+        requestsPerWindow: 8, // Conservative: 8 req/sec (below 10 limit)
+        windowMs: 1000, // 1 second
+        warningThreshold: 0.5, // 50% - warn early for CORE
+        blockingThreshold: 0.75, // 75% - block earlier to prevent 429
+      },
+    ],
+    // Phase 10.195: Unpaywall API rate limiting
+    // Unpaywall: 100,000 req/day = ~1.15 req/sec, but burst allowed
+    [
+      'unpaywall',
+      {
+        name: 'Unpaywall',
+        requestsPerWindow: 10, // 10 req/sec burst allowed
+        windowMs: 1000, // 1 second
+        warningThreshold: 0.6, // 60%
+        blockingThreshold: 0.8, // 80%
+      },
+    ],
+    // Phase 10.195: Publisher HTML fetching rate limiting
+    // Generic rate limit for publisher websites to avoid IP bans
+    [
+      'publisher-html',
+      {
+        name: 'Publisher HTML',
+        requestsPerWindow: 5, // 5 req/sec to avoid IP bans
+        windowMs: 1000, // 1 second
+        warningThreshold: 0.6, // 60%
+        blockingThreshold: 0.8, // 80%
+      },
+    ],
   ]);
 
   // Tracking request timestamps per provider
@@ -412,6 +449,87 @@ export class APIQuotaMonitorService {
       }
     }
     return false;
+  }
+
+  /**
+   * Phase 10.195: Wait for quota to become available
+   * Netflix-grade: Async waiting with exponential backoff
+   *
+   * @param provider API provider key
+   * @param maxWaitMs Maximum time to wait (default 30s)
+   * @returns true if quota available, false if timeout
+   */
+  async waitForQuota(provider: string, maxWaitMs: number = 30000): Promise<boolean> {
+    const config = this.providers.get(provider);
+    if (!config) {
+      return true; // Allow if provider not configured
+    }
+
+    const startTime = Date.now();
+    let waitTime = 100; // Start with 100ms
+
+    while (Date.now() - startTime < maxWaitMs) {
+      if (this.canMakeRequest(provider)) {
+        return true;
+      }
+
+      // Exponential backoff: 100ms, 200ms, 400ms, 800ms, max 1000ms
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+      waitTime = Math.min(waitTime * 2, 1000);
+    }
+
+    this.logger.warn(
+      `⏰ [Quota] ${config.name} wait timeout after ${maxWaitMs}ms`,
+    );
+    return false;
+  }
+
+  /**
+   * Phase 10.195: Acquire quota slot with automatic waiting
+   * Netflix-grade: Blocks until quota available, then records request
+   *
+   * @param provider API provider key
+   * @param maxWaitMs Maximum time to wait
+   * @returns true if slot acquired, false if blocked/timeout
+   */
+  async acquireQuotaSlot(
+    provider: string,
+    maxWaitMs: number = 30000,
+  ): Promise<boolean> {
+    const acquired = await this.waitForQuota(provider, maxWaitMs);
+    if (acquired) {
+      this.recordRequest(provider);
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Phase 10.195: Get delay needed before next request can be made
+   * Used for intelligent request scheduling
+   */
+  getDelayUntilAvailable(provider: string): number {
+    const config = this.providers.get(provider);
+    if (!config) {
+      return 0;
+    }
+
+    const stats = this.getQuotaStats(provider);
+    if (!stats.isBlocked) {
+      return 0;
+    }
+
+    // Calculate time until oldest request expires from window
+    const window = this.windows.get(provider);
+    if (!window || window.requests.length === 0) {
+      return 0;
+    }
+
+    const now = Date.now();
+    const oldestRequest = Math.min(...window.requests);
+    const expiresAt = oldestRequest + config.windowMs;
+
+    return Math.max(0, expiresAt - now);
   }
 
   /**

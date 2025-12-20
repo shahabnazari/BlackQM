@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { PrismaService } from '../../../common/prisma.service';
 
 /**
@@ -89,24 +88,14 @@ export interface QuestionAnalysisRequest {
 @Injectable()
 export class ResearchQuestionService {
   private readonly logger = new Logger(ResearchQuestionService.name);
-  private openai!: OpenAI;
   private readonly maxRetries = 3;
   private readonly costPerRefinement = 0.05; // $0.05 budget per question
   private questionCache = new Map<string, RefinedQuestion>();
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService,
-  ) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-    if (!apiKey) {
-      this.logger.warn(
-        'OPENAI_API_KEY not configured - AI features will be limited',
-      );
-    } else {
-      this.openai = new OpenAI({ apiKey });
-    }
-  }
+    private unifiedAIService: UnifiedAIService,
+  ) {}
 
   /**
    * Main method: Refine research question using SQUARE-IT framework
@@ -191,10 +180,6 @@ export class ResearchQuestionService {
   private async evaluateSQUAREIT(
     request: QuestionAnalysisRequest,
   ): Promise<SQUAREITScore> {
-    if (!this.openai) {
-      return this.getFallbackSQUAREITScore();
-    }
-
     const prompt = `Evaluate the following research question using the SQUARE-IT framework:
 
 Question: "${request.question}"
@@ -243,23 +228,17 @@ Return a JSON object with this structure:
 }`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert research methodology advisor specializing in Q-methodology and research design. Provide objective, evidence-based evaluations.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for SQUARE-IT evaluation
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.3,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert research methodology advisor specializing in Q-methodology and research design. Provide objective, evidence-based evaluations.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.content;
       if (!content) {
-        throw new Error('Empty response from OpenAI');
+        throw new Error('Empty response from AI service');
       }
 
       const scores = JSON.parse(content);
@@ -302,10 +281,6 @@ Return a JSON object with this structure:
     request: QuestionAnalysisRequest,
     squareitScore: SQUAREITScore,
   ): Promise<string[]> {
-    if (!this.openai) {
-      return [request.question];
-    }
-
     const weakPoints = this.identifyWeakPoints(squareitScore);
 
     const prompt = `Refine this research question to improve its quality:
@@ -348,21 +323,15 @@ Generate 3-5 refined versions of this question that:
 Return JSON array: ["refined question 1", "refined question 2", ...]`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert research methodology advisor. Generate clear, specific, and researchable questions.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for question refinement
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.7,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert research methodology advisor. Generate clear, specific, and researchable questions.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.content;
       if (!content) {
         return [request.question];
       }
@@ -386,10 +355,6 @@ Return JSON array: ["refined question 1", "refined question 2", ...]`;
     mainQuestion: string,
     gaps: any[],
   ): Promise<SubQuestion[]> {
-    if (!this.openai) {
-      return [];
-    }
-
     const prompt = `Decompose this research question into 3-7 focused sub-questions:
 
 Main Question: "${mainQuestion}"
@@ -430,21 +395,15 @@ Return JSON: {
 }`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert at breaking down complex research questions into manageable sub-questions.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for sub-question decomposition
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.5,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert at breaking down complex research questions into manageable sub-questions.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = response.content;
       if (!content) {
         return [];
       }

@@ -24,10 +24,10 @@ import { SemanticCacheService } from './services/semantic-cache.service';
 // Phase 10.102 Phase 3: Error handling & Bulkhead Pattern
 import { BulkheadService } from './services/bulkhead.service';
 import { RetryService } from './services/retry.service';
-// Phase 8.91: Services NOT YET IMPLEMENTED - commented out to prevent build errors
+// Phase 8.91: Enterprise Observability Services
 // import { MetricsService } from './services/metrics.service';
 // import { DeduplicationService } from './services/deduplication.service';
-// import { TelemetryService } from './services/telemetry.service';
+import { TelemetryService } from './services/telemetry.service'; // Phase 10.186.4: A+ Distributed Tracing
 // import { AdaptiveRateLimitService } from './services/adaptive-rate-limit.service';
 import { PrismaModule } from './prisma.module';
 
@@ -40,10 +40,11 @@ import { PrismaModule } from './prisma.module';
     // Phase 10.102 Phase 3: Error Handling & Bulkhead Pattern
     BulkheadService,
     RetryService,
+    // Phase 10.186.4: A+ Distributed Tracing
+    TelemetryService,
     // Phase 8.91: Services NOT YET IMPLEMENTED
     // MetricsService,
     // DeduplicationService,
-    // TelemetryService,
     // AdaptiveRateLimitService,
   ],
   exports: [
@@ -52,10 +53,11 @@ import { PrismaModule } from './prisma.module';
     // Phase 10.102 Phase 3: Error Handling & Bulkhead Pattern
     BulkheadService,
     RetryService,
+    // Phase 10.186.4: A+ Distributed Tracing
+    TelemetryService,
     // Phase 8.91: Services NOT YET IMPLEMENTED
     // MetricsService,
     // DeduplicationService,
-    // TelemetryService,
     // AdaptiveRateLimitService,
   ],
 })

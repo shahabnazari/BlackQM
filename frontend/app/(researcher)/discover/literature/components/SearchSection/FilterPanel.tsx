@@ -9,10 +9,11 @@
 
 import React, { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, X, Check, Award } from 'lucide-react';
+import { Star, X, Check, Award, FileText, BookX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 import { useLiteratureSearchStore } from '@/lib/stores/literature-search.store';
 import { logger } from '@/lib/utils/logger';
 import type { SearchFilters } from '@/lib/types/literature.types';
@@ -367,6 +368,59 @@ References:
               <option value="date">Date (Newest)</option>
             </select>
           </div>
+        </div>
+
+        {/* Phase 10.195: Research-Critical Filters (Full-Text & Exclude Books) */}
+        <div className="flex flex-wrap gap-3 pt-2">
+          {/* Full-Text Only Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              logger.debug('Full-text filter toggled', 'FilterPanel', { hasFullTextOnly: !filters.hasFullTextOnly });
+              setFilters({ hasFullTextOnly: !filters.hasFullTextOnly });
+            }}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all',
+              'focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1',
+              filters.hasFullTextOnly
+                ? 'border-green-300 bg-green-50 text-green-800'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+            )}
+            role="checkbox"
+            aria-checked={filters.hasFullTextOnly}
+            aria-label="Filter to only show papers with full-text available"
+          >
+            <FileText className={cn('w-4 h-4', filters.hasFullTextOnly ? 'text-green-600' : 'text-gray-400')} />
+            <span className="text-sm font-medium">Full-Text Only</span>
+            {filters.hasFullTextOnly && (
+              <Check className="w-4 h-4 text-green-600" />
+            )}
+          </button>
+
+          {/* Exclude Books Toggle */}
+          <button
+            type="button"
+            onClick={() => {
+              logger.debug('Exclude books filter toggled', 'FilterPanel', { excludeBooks: !filters.excludeBooks });
+              setFilters({ excludeBooks: !filters.excludeBooks });
+            }}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all',
+              'focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-1',
+              filters.excludeBooks
+                ? 'border-orange-300 bg-orange-50 text-orange-800'
+                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+            )}
+            role="checkbox"
+            aria-checked={filters.excludeBooks}
+            aria-label="Exclude books and book chapters from results"
+          >
+            <BookX className={cn('w-4 h-4', filters.excludeBooks ? 'text-orange-600' : 'text-gray-400')} />
+            <span className="text-sm font-medium">Exclude Books</span>
+            {filters.excludeBooks && (
+              <Check className="w-4 h-4 text-orange-600" />
+            )}
+          </button>
         </div>
 
         {/* Enterprise Quality Info Alert */}

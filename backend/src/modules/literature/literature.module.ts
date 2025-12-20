@@ -1,4 +1,6 @@
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module, OnModuleInit, Optional } from '@nestjs/common';
+// Phase 10.190: Unified AI Service
+import { UnifiedAIService } from '../ai/services/unified-ai.service';
 import { LiteratureController } from './literature.controller';
 import { LiteratureService } from './literature.service';
 import { ReferenceService } from './services/reference.service';
@@ -202,12 +204,17 @@ import { ConstantComparisonEngine } from './services/constant-comparison.service
 import { TheoreticalSamplingService } from './services/theoretical-sampling.service';
 import { LiteratureSynthesisPipelineService } from './services/literature-synthesis-pipeline.service';
 import { HypothesisGenerationPipelineService } from './services/hypothesis-generation-pipeline.service';
+// Phase 10.181: Abstract Enrichment Service (PubMed fallback for missing abstracts)
+import { AbstractEnrichmentService } from './services/abstract-enrichment.service';
+// Phase 10.182: Universal Abstract Enrichment Service (multi-tier waterfall)
+import { UniversalAbstractEnrichmentService } from './services/universal-abstract-enrichment.service';
 import { AuthModule } from '../auth/auth.module';
 import { LiteratureGateway } from './literature.gateway';
 import { ThemeExtractionGateway } from './gateways/theme-extraction.gateway';
 import { HttpModule } from '@nestjs/axios';
 import { CacheModule } from '@nestjs/cache-manager';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { ScheduleModule } from '@nestjs/schedule';
 import { PrismaModule } from '../../common/prisma.module';
 import { CacheService } from '../../common/cache.service';
 import { AIModule } from '../ai/ai.module';
@@ -219,6 +226,7 @@ import { AIModule } from '../ai/ai.module';
     PrismaModule,
     AIModule,
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(), // Phase 10.185: Enable scheduled tasks (stuck job cleanup)
     CacheModule.register({
       ttl: 3600, // 1 hour cache
       max: 1000, // Maximum items in cache
@@ -425,6 +433,10 @@ import { AIModule } from '../ai/ai.module';
     TheoreticalSamplingService,
     LiteratureSynthesisPipelineService,
     HypothesisGenerationPipelineService,
+    // Phase 10.181: Abstract Enrichment Service (PubMed fallback for missing abstracts)
+    AbstractEnrichmentService,
+    // Phase 10.182: Universal Abstract Enrichment Service (multi-tier waterfall)
+    UniversalAbstractEnrichmentService,
   ],
   exports: [
     LiteratureService,
@@ -550,6 +562,10 @@ import { AIModule } from '../ai/ai.module';
     TheoreticalSamplingService,
     LiteratureSynthesisPipelineService,
     HypothesisGenerationPipelineService,
+    // Phase 10.181: Abstract Enrichment Service (PubMed fallback for missing abstracts)
+    AbstractEnrichmentService,
+    // Phase 10.182: Universal Abstract Enrichment Service (multi-tier waterfall)
+    UniversalAbstractEnrichmentService,
   ],
 })
 export class LiteratureModule implements OnModuleInit {
@@ -561,6 +577,8 @@ export class LiteratureModule implements OnModuleInit {
     // Phase 10.113 Week 7: Thematization WebSocket wiring
     private readonly thematizationGateway: ThematizationGateway,
     private readonly thematizationProgressService: ThematizationProgressService,
+    // Phase 10.190: Unified AI Service metrics wiring
+    @Optional() private readonly unifiedAIService?: UnifiedAIService,
   ) {}
 
   /**
@@ -579,5 +597,10 @@ export class LiteratureModule implements OnModuleInit {
 
     // Phase 10.113 Week 7: Thematization WebSocket gateway wiring
     this.thematizationProgressService.setGateway(this.thematizationGateway);
+
+    // Phase 10.190: Wire UnifiedAIService metrics (enables provider-level observability)
+    if (this.unifiedAIService) {
+      this.unifiedAIService.setMetricsService(this.metricsService);
+    }
   }
 }

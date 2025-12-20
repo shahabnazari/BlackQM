@@ -21,11 +21,11 @@ import {
   QueryExpansionService,
   ExpandedQuery,
 } from './query-expansion.service';
-import { OpenAIService } from './openai.service';
+import { UnifiedAIService } from './unified-ai.service';
 
 describe('QueryExpansionService', () => {
   let service: QueryExpansionService;
-  let openaiService: jest.Mocked<OpenAIService>;
+  let unifiedAIService: jest.Mocked<UnifiedAIService>;
 
   const mockExpansionResponse = {
     content: JSON.stringify({
@@ -47,9 +47,13 @@ describe('QueryExpansionService', () => {
       ],
     }),
     tokens: 150,
-    responseTime: 500,
+    inputTokens: 100,
+    outputTokens: 50,
+    responseTimeMs: 500,
     cached: false,
     cost: 0.001,
+    provider: 'groq',
+    model: 'llama-3.3-70b-versatile',
   };
 
   const mockVagueQueryResponse = {
@@ -74,13 +78,17 @@ describe('QueryExpansionService', () => {
       ],
     }),
     tokens: 180,
-    responseTime: 600,
+    inputTokens: 120,
+    outputTokens: 60,
+    responseTimeMs: 600,
     cached: false,
     cost: 0.0012,
+    provider: 'groq',
+    model: 'llama-3.3-70b-versatile',
   };
 
   beforeEach(async () => {
-    const mockOpenAIService = {
+    const mockUnifiedAIService = {
       generateCompletion: jest.fn(),
     };
 
@@ -88,14 +96,14 @@ describe('QueryExpansionService', () => {
       providers: [
         QueryExpansionService,
         {
-          provide: OpenAIService,
-          useValue: mockOpenAIService,
+          provide: UnifiedAIService,
+          useValue: mockUnifiedAIService,
         },
       ],
     }).compile();
 
     service = module.get<QueryExpansionService>(QueryExpansionService);
-    openaiService = module.get(OpenAIService) as jest.Mocked<OpenAIService>;
+    unifiedAIService = module.get(UnifiedAIService) as jest.Mocked<UnifiedAIService>;
   });
 
   afterEach(() => {
@@ -104,7 +112,7 @@ describe('QueryExpansionService', () => {
 
   describe('expandQuery', () => {
     it('should expand specific query successfully', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       const result = await service.expandQuery(
         'climate change agriculture',
@@ -121,7 +129,7 @@ describe('QueryExpansionService', () => {
         relatedTerms: expect.arrayContaining(['agricultural sustainability']),
       });
 
-      expect(openaiService.generateCompletion).toHaveBeenCalledWith(
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledWith(
         expect.stringContaining('climate change agriculture'),
         expect.objectContaining({
           model: 'fast',
@@ -131,7 +139,7 @@ describe('QueryExpansionService', () => {
     });
 
     it('should detect vague queries and provide narrowing questions', async () => {
-      openaiService.generateCompletion.mockResolvedValue(
+      unifiedAIService.generateCompletion.mockResolvedValue(
         mockVagueQueryResponse,
       );
 
@@ -144,26 +152,26 @@ describe('QueryExpansionService', () => {
     });
 
     it('should apply domain-specific context when provided', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       await service.expandQuery('health interventions', 'health');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('health');
       expect(calledPrompt).toContain('health interventions');
     });
 
     it('should use general academic context when domain is not specified', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       await service.expandQuery('research methods');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('General academic research');
     });
 
     it('should cache results for the same query and domain', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       // First call
       const result1 = await service.expandQuery('climate', 'general');
@@ -172,29 +180,33 @@ describe('QueryExpansionService', () => {
       const result2 = await service.expandQuery('climate', 'general');
 
       expect(result1).toEqual(result2);
-      expect(openaiService.generateCompletion).toHaveBeenCalledTimes(1);
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledTimes(1);
     });
 
     it('should differentiate cache by domain', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       // Same query, different domains
       await service.expandQuery('health', 'health');
       await service.expandQuery('health', 'education');
 
       // Should call OpenAI twice (different cache keys)
-      expect(openaiService.generateCompletion).toHaveBeenCalledTimes(2);
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledTimes(2);
     });
 
     it('should handle AI response with markdown code blocks', async () => {
       const responseWithMarkdown = {
         content: '```json\n' + mockExpansionResponse.content + '\n```',
         tokens: 150,
-        responseTime: 500,
+        inputTokens: 100,
+        outputTokens: 50,
+        responseTimeMs: 500,
         cached: false,
         cost: 0.001,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       };
-      openaiService.generateCompletion.mockResolvedValue(responseWithMarkdown);
+      unifiedAIService.generateCompletion.mockResolvedValue(responseWithMarkdown);
 
       const result = await service.expandQuery('climate', 'general');
 
@@ -203,12 +215,16 @@ describe('QueryExpansionService', () => {
     });
 
     it('should return original query on invalid AI response', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: 'Invalid response without JSON',
         tokens: 10,
-        responseTime: 100,
+        inputTokens: 5,
+        outputTokens: 5,
+        responseTimeMs: 100,
         cached: false,
         cost: 0.0001,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.expandQuery('climate', 'general');
@@ -224,7 +240,7 @@ describe('QueryExpansionService', () => {
     });
 
     it('should handle OpenAI service failure gracefully', async () => {
-      openaiService.generateCompletion.mockRejectedValue(
+      unifiedAIService.generateCompletion.mockRejectedValue(
         new Error('OpenAI API error'),
       );
 
@@ -241,15 +257,19 @@ describe('QueryExpansionService', () => {
     });
 
     it('should handle partial AI responses gracefully', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify({
           expanded: 'climate research',
           // Missing other fields
         }),
         tokens: 50,
-        responseTime: 200,
+        inputTokens: 30,
+        outputTokens: 20,
+        responseTimeMs: 200,
         cached: false,
         cost: 0.0005,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.expandQuery('climate', 'general');
@@ -276,13 +296,17 @@ describe('QueryExpansionService', () => {
         confidence: [0.9, 0.85, 0.8, 0.75, 0.7],
       }),
       tokens: 100,
-      responseTime: 400,
+      inputTokens: 60,
+      outputTokens: 40,
+      responseTimeMs: 400,
       cached: false,
       cost: 0.0008,
+      provider: 'groq',
+      model: 'llama-3.3-70b-versatile',
     };
 
     it('should suggest related academic terms', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockTermsResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockTermsResponse);
 
       const result = await service.suggestTerms(
         'climate change',
@@ -296,37 +320,41 @@ describe('QueryExpansionService', () => {
     });
 
     it('should work without field specification', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockTermsResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockTermsResponse);
 
       const result = await service.suggestTerms('climate change');
 
       expect(result.terms).toHaveLength(5);
       expect(result.confidence).toHaveLength(5);
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('climate change');
       expect(calledPrompt).not.toContain('Field:');
     });
 
     it('should include field context when provided', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockTermsResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockTermsResponse);
 
       await service.suggestTerms('health', 'public health');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('Field: public health');
     });
 
     it('should use default confidence when not provided', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify({
           terms: ['term1', 'term2', 'term3'],
           // confidence array missing
         }),
         tokens: 30,
-        responseTime: 150,
+        inputTokens: 15,
+        outputTokens: 15,
+        responseTimeMs: 150,
         cached: false,
         cost: 0.0003,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.suggestTerms('climate');
@@ -337,12 +365,16 @@ describe('QueryExpansionService', () => {
     });
 
     it('should return empty arrays on invalid response', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: 'Invalid JSON response',
         tokens: 10,
-        responseTime: 100,
+        inputTokens: 5,
+        outputTokens: 5,
+        responseTimeMs: 100,
         cached: false,
         cost: 0.0001,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.suggestTerms('climate');
@@ -352,7 +384,7 @@ describe('QueryExpansionService', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      openaiService.generateCompletion.mockRejectedValue(
+      unifiedAIService.generateCompletion.mockRejectedValue(
         new Error('API error'),
       );
 
@@ -375,13 +407,17 @@ describe('QueryExpansionService', () => {
           'Narrowing helps focus research on specific ecosystems, methodologies, and geographic contexts',
       }),
       tokens: 120,
-      responseTime: 450,
+      inputTokens: 70,
+      outputTokens: 50,
+      responseTimeMs: 450,
       cached: false,
       cost: 0.0009,
+      provider: 'groq',
+      model: 'llama-3.3-70b-versatile',
     };
 
     it('should provide narrowing suggestions for broad queries', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockNarrowResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockNarrowResponse);
 
       const result = await service.narrowQuery('climate');
 
@@ -391,7 +427,7 @@ describe('QueryExpansionService', () => {
     });
 
     it('should include methodology keywords in narrowed queries', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockNarrowResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockNarrowResponse);
 
       const result = await service.narrowQuery('health');
 
@@ -402,12 +438,16 @@ describe('QueryExpansionService', () => {
     });
 
     it('should return empty arrays on invalid response', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: 'Not valid JSON',
         tokens: 10,
-        responseTime: 100,
+        inputTokens: 5,
+        outputTokens: 5,
+        responseTimeMs: 100,
         cached: false,
         cost: 0.0001,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.narrowQuery('climate');
@@ -417,7 +457,7 @@ describe('QueryExpansionService', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      openaiService.generateCompletion.mockRejectedValue(
+      unifiedAIService.generateCompletion.mockRejectedValue(
         new Error('API error'),
       );
 
@@ -430,11 +470,11 @@ describe('QueryExpansionService', () => {
 
   describe('buildExpansionPrompt', () => {
     it('should build prompt with domain context', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       await service.expandQuery('health interventions', 'health');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
 
       expect(calledPrompt).toContain('health');
       expect(calledPrompt).toContain('health interventions');
@@ -444,11 +484,11 @@ describe('QueryExpansionService', () => {
     });
 
     it('should include examples in prompt', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       await service.expandQuery('test query', 'general');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
 
       expect(calledPrompt).toContain('Examples:');
       expect(calledPrompt).toContain('climate');
@@ -459,22 +499,22 @@ describe('QueryExpansionService', () => {
   describe('clearExpiredCache', () => {
     it('should remove expired cache entries', async () => {
       // Create cache entry
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
       await service.expandQuery('climate', 'general');
 
       // Clear expired cache
       service.clearExpiredCache();
 
       // Cache should still exist (not expired - 1 hour TTL)
-      openaiService.generateCompletion.mockClear();
+      unifiedAIService.generateCompletion.mockClear();
       await service.expandQuery('climate', 'general');
-      expect(openaiService.generateCompletion).not.toHaveBeenCalled();
+      expect(unifiedAIService.generateCompletion).not.toHaveBeenCalled();
     });
   });
 
   describe('edge cases', () => {
     it('should handle single-word queries', async () => {
-      openaiService.generateCompletion.mockResolvedValue(
+      unifiedAIService.generateCompletion.mockResolvedValue(
         mockVagueQueryResponse,
       );
 
@@ -488,19 +528,19 @@ describe('QueryExpansionService', () => {
       const longQuery =
         'climate change impacts on agricultural productivity in sub-saharan africa with focus on smallholder farmers adaptation strategies';
 
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       const result = await service.expandQuery(longQuery, 'climate');
 
       expect(result.expanded).toBeTruthy();
-      expect(openaiService.generateCompletion).toHaveBeenCalledWith(
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledWith(
         expect.stringContaining(longQuery),
         expect.any(Object),
       );
     });
 
     it('should handle queries with special characters', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       const result = await service.expandQuery(
         'climate & health: impact?',
@@ -511,7 +551,7 @@ describe('QueryExpansionService', () => {
     });
 
     it('should handle empty expanded response', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify({
           expanded: '',
           suggestions: [],
@@ -521,9 +561,13 @@ describe('QueryExpansionService', () => {
           relatedTerms: [],
         }),
         tokens: 40,
-        responseTime: 180,
+        inputTokens: 20,
+        outputTokens: 20,
+        responseTimeMs: 180,
         cached: false,
         cost: 0.0004,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.expandQuery('', 'general');
@@ -535,18 +579,18 @@ describe('QueryExpansionService', () => {
 
   describe('performance and caching', () => {
     it('should use cache for repeated queries within TTL', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       // Multiple calls with same parameters
       await service.expandQuery('climate', 'general');
       await service.expandQuery('climate', 'general');
       await service.expandQuery('climate', 'general');
 
-      expect(openaiService.generateCompletion).toHaveBeenCalledTimes(1);
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledTimes(1);
     });
 
     it('should handle concurrent requests efficiently', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       const queries = ['climate', 'health', 'education', 'technology'];
       const promises = queries.map((q) => service.expandQuery(q, 'general'));
@@ -554,35 +598,35 @@ describe('QueryExpansionService', () => {
       const results = await Promise.all(promises);
 
       expect(results).toHaveLength(4);
-      expect(openaiService.generateCompletion).toHaveBeenCalledTimes(4);
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledTimes(4);
     });
   });
 
   describe('domain-specific behavior', () => {
     it('should adapt to climate domain', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       await service.expandQuery('adaptation', 'climate');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('climate');
     });
 
     it('should adapt to health domain', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       await service.expandQuery('intervention', 'health');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('health');
     });
 
     it('should adapt to education domain', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockExpansionResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockExpansionResponse);
 
       await service.expandQuery('learning', 'education');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('education');
     });
   });

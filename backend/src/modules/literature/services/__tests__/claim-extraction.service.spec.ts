@@ -8,7 +8,7 @@
 
 import { Test, TestingModule } from '@nestjs/testing';
 import { ClaimExtractionService } from '../claim-extraction.service';
-import { OpenAIService } from '../../../ai/services/openai.service';
+import { UnifiedAIService } from '../../../ai/services/unified-ai.service';
 import { LocalEmbeddingService } from '../local-embedding.service';
 import {
   ClaimExtractionPaperInput,
@@ -82,7 +82,7 @@ function createMockTheme(): ClaimExtractionThemeContext {
 // MOCKS
 // ============================================================================
 
-const mockOpenAIService = {
+const mockUnifiedAIService = {
   generateCompletion: jest.fn().mockImplementation((prompt: string) => {
     // Return different responses based on prompt content
     if (prompt.includes('Extract key claims')) {
@@ -138,7 +138,7 @@ describe('ClaimExtractionService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClaimExtractionService,
-        { provide: OpenAIService, useValue: mockOpenAIService },
+        { provide: UnifiedAIService, useValue: mockUnifiedAIService },
         { provide: LocalEmbeddingService, useValue: mockEmbeddingService },
       ],
     }).compile();
@@ -606,7 +606,7 @@ describe('ClaimExtractionService', () => {
 
   describe('Error Handling', () => {
     it('should handle AI service errors gracefully', async () => {
-      mockOpenAIService.generateCompletion.mockRejectedValueOnce(
+      mockUnifiedAIService.generateCompletion.mockRejectedValueOnce(
         new Error('AI service unavailable'),
       );
 
@@ -620,7 +620,7 @@ describe('ClaimExtractionService', () => {
     });
 
     it('should handle malformed AI responses', async () => {
-      mockOpenAIService.generateCompletion.mockResolvedValueOnce({
+      mockUnifiedAIService.generateCompletion.mockResolvedValueOnce({
         content: 'not valid json',
       });
 

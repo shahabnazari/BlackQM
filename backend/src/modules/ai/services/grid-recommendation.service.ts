@@ -1,7 +1,27 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OpenAIService } from './openai.service';
-import { AICostService } from './ai-cost.service';
+import { UnifiedAIService } from './unified-ai.service';
 import * as crypto from 'crypto';
+
+// ============================================================================
+// Phase 10.185 Week 3: System Prompts for Grid Recommendation
+// ============================================================================
+
+const GRID_RECOMMENDATION_SYSTEM_PROMPT = `You are an expert Q-methodology researcher specializing in grid design and forced distribution configurations.
+
+Your role is to:
+1. Generate optimal Q-sort grid configurations for research studies
+2. Balance methodological rigor with participant usability
+3. Consider participant experience levels when recommending complexity
+4. Design distributions that capture nuanced viewpoints
+
+Guidelines:
+- Novice participants benefit from simpler grids (7-9 columns)
+- Expert participants can handle complex grids (9-11 columns)
+- Exploratory research benefits from wider distributions
+- Confirmatory research needs more centered distributions
+- All distributions must be symmetrical and sum to the exact statement count
+
+Output must be valid JSON array as specified in the prompt.`;
 
 export interface GridConfig {
   columns: number;
@@ -17,10 +37,7 @@ export class GridRecommendationService {
   private readonly cache = new Map<string, { data: GridConfig[]; timestamp: number }>();
   private readonly CACHE_TTL = 3600000; // 1 hour
 
-  constructor(
-    private readonly openaiService: OpenAIService,
-    private readonly costService: AICostService,
-  ) {}
+  constructor(private readonly unifiedAIService: UnifiedAIService) {}
 
   async getRecommendations(
     studyTopic: string,
@@ -45,9 +62,15 @@ export class GridRecommendationService {
         researchType,
       );
 
-      const response = await this.openaiService.generateCompletion(
+      const response = await this.unifiedAIService.generateCompletion(
         prompt,
-        { model: 'smart', temperature: 0.7, maxTokens: 1500, userId },
+        {
+          model: 'smart',
+          temperature: 0.7,
+          maxTokens: 1500,
+          cache: true, // Phase 10.185: Enable caching
+          systemPrompt: GRID_RECOMMENDATION_SYSTEM_PROMPT,
+        },
       );
 
       const recommendations = this.parseRecommendations(response.content);
@@ -61,7 +84,7 @@ export class GridRecommendationService {
       // Cache the result
       this.setCache(cacheKey, recommendations);
       
-      // Cost tracking is handled by OpenAIService
+      // Cost tracking is handled by UnifiedAIService
 
       return recommendations;
     } catch (error) {

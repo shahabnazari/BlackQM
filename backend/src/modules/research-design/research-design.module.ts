@@ -1,6 +1,7 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaService } from '../../common/prisma.service';
+import { AIModule } from '../ai/ai.module';
 import { ResearchQuestionService } from './services/research-question.service';
 import { HypothesisGeneratorService } from './services/hypothesis-generator.service';
 import { QuestionOperationalizationService } from './services/question-operationalization.service';
@@ -23,7 +24,7 @@ import { ResearchDesignController } from './controllers/research-design.controll
  * - Feeds into Phase 10 Questionnaire Builder (Day 5.13)
  */
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, forwardRef(() => AIModule)],
   controllers: [ResearchDesignController],
   providers: [
     PrismaService,

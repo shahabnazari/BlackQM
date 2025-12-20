@@ -177,15 +177,15 @@ export const QualityFunnelVisualizer = memo<QualityFunnelProps>(
           </div>
         </div>
 
-        {/* Quality Score Bar */}
+        {/* Paper Quality Score Bar - Phase 10.202: Clarified this shows PAPER quality, not search progress */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[9px] text-white/50">Quality Score</span>
+            <span className="text-[9px] text-white/50">Avg Paper Quality</span>
             <span
               className="text-xs font-bold tabular-nums"
               style={{ color: qualityInfo.color }}
             >
-              {qualityPercent}%
+              {qualityPercent}/100
             </span>
           </div>
 
@@ -206,7 +206,7 @@ export const QualityFunnelVisualizer = memo<QualityFunnelProps>(
               className="text-[9px] font-medium"
               style={{ color: qualityInfo.color }}
             >
-              {qualityInfo.label} Quality
+              {qualityInfo.label}
             </span>
           </div>
         </div>

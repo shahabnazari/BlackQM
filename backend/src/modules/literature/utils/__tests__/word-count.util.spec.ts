@@ -1,8 +1,10 @@
 /**
  * Word Count Utility Tests
  * Phase 10 Day 5.13+ - Academic Paper Eligibility
+ * Phase 10.185: Netflix-Grade - Added Vitest imports for ESM compatibility
  */
 
+import { describe, it, expect } from 'vitest';
 import {
   calculateWordCount,
   calculateAbstractWordCount,
@@ -35,8 +37,10 @@ describe('Word Count Utility', () => {
         Smith, J. (2020). Title of paper. Journal Name.
         Jones, A. (2021). Another paper. Conference Proceedings.
       `;
-      const wordCount = calculateWordCount(text, false);
-      // Should count only content before "References"
+      // Phase 10.185: Fixed test - excludeNonContentSections=true (default) excludes refs
+      // Pass true or omit parameter to exclude references
+      const wordCount = calculateWordCount(text, true);
+      // Should count only content before "References" (~14 words)
       expect(wordCount).toBeLessThan(20);
       expect(wordCount).toBeGreaterThan(10);
     });
@@ -49,20 +53,25 @@ describe('Word Count Utility', () => {
         Reference 1
         Reference 2
       `;
-      const wordCount = calculateWordCount(text, false);
+      // Phase 10.185: Fixed test - use default (true) to exclude bibliography
+      const wordCount = calculateWordCount(text);
+      // Should count only "Main content here with research findings." (~6 words)
       expect(wordCount).toBeLessThan(10);
     });
 
-    it('should count all words when includeReferences is true', () => {
+    it('should count all words when excludeNonContentSections is false', () => {
       const text = `
         Main content.
 
         References
         Many reference words here in the reference section.
       `;
-      const withoutRefs = calculateWordCount(text, false);
-      const withRefs = calculateWordCount(text, true);
-      expect(withRefs).toBeGreaterThan(withoutRefs);
+      // Phase 10.185: Fixed test - corrected parameter semantics
+      // excludeNonContentSections=true → excludes refs (fewer words)
+      // excludeNonContentSections=false → includes refs (more words)
+      const excludingRefs = calculateWordCount(text, true);
+      const includingRefs = calculateWordCount(text, false);
+      expect(includingRefs).toBeGreaterThan(excludingRefs);
     });
 
     it('should handle multiple whitespace correctly', () => {

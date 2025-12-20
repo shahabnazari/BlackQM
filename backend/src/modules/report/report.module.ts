@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ReportService } from './report.service';
 import { ReportController } from './report.controller';
@@ -18,6 +18,7 @@ import { CacheService } from '../../common/cache.service';
 import { PrismaService } from '../../common/prisma.service';
 import { StudyModule } from '../study/study.module';
 import { AnalysisModule } from '../analysis/analysis.module';
+import { AIModule } from '../ai/ai.module';
 
 /**
  * Report Module
@@ -46,7 +47,7 @@ import { AnalysisModule } from '../analysis/analysis.module';
  *   - Approval workflow for publishing
  */
 @Module({
-  imports: [ConfigModule, StudyModule, AnalysisModule],
+  imports: [ConfigModule, StudyModule, AnalysisModule, forwardRef(() => AIModule)],
   controllers: [
     ReportController, // Phase 7 controller (basic reports)
     ReportControllerV2, // Phase 10 controller (advanced reports)

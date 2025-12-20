@@ -296,22 +296,33 @@ export async function getUserUsage(): Promise<UserUsageStats | null> {
   try {
     logger.debug('Fetching user usage', 'ThematizationPricingAPI');
 
-    const response = await apiClient.get<UserUsageStats>(
+    // Backend returns { success: true, data: UserUsageStats }
+    // apiClient.get() extracts response.data, so we get { success: true, data: UserUsageStats }
+    const response = await apiClient.get<{ success: boolean; data: UserUsageStats }>(
       '/thematization/usage',
       { timeout: API_TIMEOUT_MS }
     );
 
-    const data = response.data;
+    // Extract nested data property
+    const data = response.data?.data || response.data;
+    
+    // Validate response structure
+    if (!data || typeof data !== 'object' || !('subscription' in data)) {
+      logger.warn('Invalid user usage response format', 'ThematizationPricingAPI', { response });
+      return null;
+    }
+
     logger.debug('User usage fetched', 'ThematizationPricingAPI', {
       subscription: data.subscription,
       creditsRemaining: data.creditsRemaining,
     });
 
-    return data;
+    return data as UserUsageStats;
   } catch (error) {
     const axiosError = error as AxiosError;
     logger.error('Failed to fetch user usage', 'ThematizationPricingAPI', {
       error: axiosError.message,
+      status: axiosError.response?.status,
     });
     return null;
   }

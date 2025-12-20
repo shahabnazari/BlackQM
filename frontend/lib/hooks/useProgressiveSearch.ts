@@ -203,10 +203,9 @@ export function useProgressiveSearch(): UseProgressiveSearchReturn {
           // Phase 10.170: Purpose-Aware Search Integration
           // Pass research purpose to backend for purpose-specific quality weights and paper limits
           ...(researchPurpose && { purpose: researchPurpose }),
-          // Phase 10.1 Day 11: Removed strict filters - we only have abstracts, not full-text yet
-          // minAbstractLength: 100 would require long abstracts (filters out 50% of papers)
-          // minWordCount: 3000 would require full papers (filters out 100% of abstract-only papers)
-          // These filters will be re-enabled when full-text extraction is implemented
+          // Phase 10.195: Advanced Research Filters
+          ...(appliedFilters.hasFullTextOnly && { hasFullTextOnly: true }),
+          ...(appliedFilters.excludeBooks && { excludeBooks: true }),
         };
 
         // Search params logged in main function for visibility

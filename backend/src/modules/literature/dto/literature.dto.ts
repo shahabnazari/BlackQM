@@ -217,6 +217,26 @@ export class SearchLiteratureDto {
   @IsNumber()
   @IsOptional()
   fullTextBoost?: number;
+
+  // ==========================================================================
+  // Phase 10.195: Advanced Research Filters
+  // ==========================================================================
+
+  @ApiPropertyOptional({
+    description: 'Only return papers with full-text available (hasFullText=true)',
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  hasFullTextOnly?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Exclude books and book chapters from search results',
+    default: true,
+  })
+  @IsBoolean()
+  @IsOptional()
+  excludeBooks?: boolean;
 }
 
 export class SavePaperDto {

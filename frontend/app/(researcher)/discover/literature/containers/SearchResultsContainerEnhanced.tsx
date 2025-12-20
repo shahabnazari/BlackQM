@@ -43,6 +43,8 @@ import { usePaperManagementStore } from '@/lib/stores/paper-management.store';
 import { logger } from '@/lib/utils/logger';
 import type { Paper } from '@/lib/types/literature.types';
 import { cn } from '@/lib/utils';
+// Phase 10.197: Zero-debt full-text utilities
+import { isPaperWithFullText, calculateFullTextStats } from '@/lib/utils/type-guards';
 
 // ============================================================================
 // Constants
@@ -62,6 +64,7 @@ const DEFAULT_FILTERS: PaperFilters = {
   authorCountRange: [0, 100], // Include papers with 0 authors (some preprints) and large teams
   openAccessOnly: false,
   hasPdfOnly: false,
+  hasFullTextOnly: false, // Phase 10.197: Full-text filter for theme extraction & synthesis
   publicationTypes: [],
   minimumQualityScore: 0,
 };
@@ -133,6 +136,12 @@ function applyFilters(papers: Paper[], filters: PaperFilters): Paper[] {
 
     // Has PDF filter
     if (filters.hasPdfOnly && !paper.pdfUrl) {
+      return false;
+    }
+
+    // Phase 10.197: Full-text extracted filter (for theme extraction & synthesis)
+    // Zero-debt: Uses centralized utility for consistent checking across app
+    if (filters.hasFullTextOnly && !isPaperWithFullText(paper)) {
       return false;
     }
 
@@ -238,6 +247,7 @@ function countActiveFilters(filters: PaperFilters): number {
   // Boolean filters
   if (filters.openAccessOnly) count++;
   if (filters.hasPdfOnly) count++;
+  if (filters.hasFullTextOnly) count++; // Phase 10.197: Full-text filter
 
   // Publication types
   if (filters.publicationTypes.length > 0) count++;
@@ -348,6 +358,15 @@ export const SearchResultsContainerEnhanced = memo(function SearchResultsContain
   const activeFilterCount = useMemo(() => {
     return countActiveFilters(filters);
   }, [filters]);
+
+  /**
+   * Phase 10.197: Calculate full-text availability statistics
+   * Used to show warning when full-text percentage is low for analysis pipelines
+   * Zero-debt: Uses centralized utility for consistent checking across app
+   */
+  const fullTextStats = useMemo(() => {
+    return calculateFullTextStats(papers);
+  }, [papers]);
 
   /**
    * Check if paper is saved
@@ -629,6 +648,22 @@ export const SearchResultsContainerEnhanced = memo(function SearchResultsContain
           activeFilterCount={activeFilterCount}
           onClearFilters={handleClearFilters}
         />
+      )}
+
+      {/* Phase 10.197: Low Full-Text Availability Warning */}
+      {fullTextStats.isLow && !loading && (
+        <Alert className="border-amber-200 bg-amber-50">
+          <AlertCircle className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800">
+            <span className="font-medium">Limited Full-Text Access:</span> Only{' '}
+            <span className="font-semibold">{fullTextStats.count}</span> of{' '}
+            <span className="font-semibold">{fullTextStats.total}</span> papers (
+            {fullTextStats.percentage}%) have full-text available. Theme extraction
+            and synthesis work best with full-text papers. Consider using the
+            &quot;Full-Text Only&quot; filter or signing in with ORCID for
+            institutional access.
+          </AlertDescription>
+        </Alert>
       )}
 
       {/* Main Results Card */}

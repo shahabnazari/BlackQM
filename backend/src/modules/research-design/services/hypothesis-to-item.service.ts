@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { PrismaService } from '../../../common/prisma.service';
 
 /**
@@ -144,17 +143,11 @@ export interface HypothesisToItemResult {
 @Injectable()
 export class HypothesisToItemService {
   private readonly logger = new Logger(HypothesisToItemService.name);
-  private openai: OpenAI | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
-  ) {
-    const apiKey = this.config.get<string>('OPENAI_API_KEY');
-    if (apiKey) {
-      this.openai = new OpenAI({ apiKey });
-    }
-  }
+    private readonly unifiedAIService: UnifiedAIService,
+  ) {}
 
   /**
    * Convert hypothesis into complete test battery with survey items
@@ -232,14 +225,9 @@ export class HypothesisToItemService {
     relationships: HypothesisRelationship[];
     hypothesisType: string;
   }> {
-    if (this.openai) {
-      try {
-        const completion = await this.openai.chat.completions.create({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert research methodologist. Parse the given hypothesis to extract:
+    // Phase 10.195: Use UnifiedAIService for hypothesis parsing
+    try {
+      const systemPrompt = `You are an expert research methodologist. Parse the given hypothesis to extract:
 1. Variables (independent, dependent, moderators, mediators, covariates)
 2. Relationships between variables (direct, moderated, mediated, interaction)
 3. Hypothesis type (correlational, causal, interaction, mediation, moderation)
@@ -267,19 +255,18 @@ Return JSON with structure:
       "mediatorId": "optional"
     }
   ]
-}`,
-            },
-            {
-              role: 'user',
-              content: `Hypothesis: ${request.hypothesis}\n\nStudy Context: ${request.studyContext || 'Not specified'}\n\nTarget Population: ${request.targetPopulation || 'General'}`,
-            },
-          ],
-          temperature: 0.3,
-        });
+}`;
 
-        const result = JSON.parse(
-          completion.choices[0].message.content || '{}',
-        );
+      const prompt = `Hypothesis: ${request.hypothesis}\n\nStudy Context: ${request.studyContext || 'Not specified'}\n\nTarget Population: ${request.targetPopulation || 'General'}`;
+
+      const aiResponse = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.3,
+        systemPrompt,
+        jsonMode: true,
+      });
+
+      const result = JSON.parse(aiResponse.content || '{}');
 
         // Convert to typed objects with IDs
         const variables: HypothesisVariable[] = result.variables.map(
@@ -315,20 +302,17 @@ Return JSON with structure:
             };
           });
 
-        return {
-          variables,
-          relationships,
-          hypothesisType: result.hypothesisType,
-        };
-      } catch (error: any) {
-        this.logger.warn(
-          `GPT-4 parsing failed, using template fallback: ${error.message}`,
-        );
-        return this.parseHypothesisTemplate(request);
-      }
+      return {
+        variables,
+        relationships,
+        hypothesisType: result.hypothesisType,
+      };
+    } catch (error: any) {
+      this.logger.warn(
+        `AI parsing failed, using template fallback: ${error.message}`,
+      );
+      return this.parseHypothesisTemplate(request);
     }
-
-    return this.parseHypothesisTemplate(request);
   }
 
   /**
@@ -439,14 +423,9 @@ Return JSON with structure:
     itemCount: number,
     request: HypothesisToItemRequest,
   ): Promise<HypothesisSurveyItem[]> {
-    if (this.openai) {
-      try {
-        const completion = await this.openai.chat.completions.create({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content: `You are an expert in psychometric scale development. Generate ${itemCount} survey items to measure the given variable.
+    // Phase 10.195: Use UnifiedAIService for item generation
+    try {
+      const systemPrompt = `You are an expert in psychometric scale development. Generate ${itemCount} survey items to measure the given variable.
 
 Requirements:
 1. Items should be clear, concise, and unambiguous
@@ -465,46 +444,42 @@ Return JSON array with structure:
     "psychometricNote": "Why this item is included",
     "researchBacking": "Citation or principle"
   }
-]`,
-            },
-            {
-              role: 'user',
-              content: `Variable: ${variable.name}
+]`;
+
+      const prompt = `Variable: ${variable.name}
 Definition: ${variable.definition}
 Role: ${variable.role}
 Measurement Level: ${variable.measurementLevel}
 Study Context: ${request.studyContext || 'Not specified'}
-Target Population: ${request.targetPopulation || 'General'}`,
-            },
-          ],
-          temperature: 0.5,
-        });
+Target Population: ${request.targetPopulation || 'General'}`;
 
-        const itemsData = JSON.parse(
-          completion.choices[0].message.content || '[]',
-        );
+      const aiResponse = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.5,
+        systemPrompt,
+        jsonMode: true,
+      });
 
-        return itemsData.map((item: any, index: number) => ({
-          id: `item_${variable.id}_${index + 1}`,
-          text: item.text,
-          variableId: variable.id,
-          itemNumber: index + 1,
-          scaleType: item.scaleType,
-          scaleLabels: item.scaleLabels,
-          reversed: item.reversed || false,
-          purpose: `Measure ${variable.role}: ${variable.name}`,
-          psychometricNote: item.psychometricNote,
-          researchBacking: item.researchBacking,
-        }));
-      } catch (error: any) {
-        this.logger.warn(
-          `GPT-4 item generation failed, using templates: ${error.message}`,
-        );
-        return this.generateItemsTemplate(variable, itemCount, request);
-      }
+      const itemsData = JSON.parse(aiResponse.content || '[]');
+
+      return itemsData.map((item: any, index: number) => ({
+        id: `item_${variable.id}_${index + 1}`,
+        text: item.text,
+        variableId: variable.id,
+        itemNumber: index + 1,
+        scaleType: item.scaleType,
+        scaleLabels: item.scaleLabels,
+        reversed: item.reversed || false,
+        purpose: `Measure ${variable.role}: ${variable.name}`,
+        psychometricNote: item.psychometricNote,
+        researchBacking: item.researchBacking,
+      }));
+    } catch (error: any) {
+      this.logger.warn(
+        `AI item generation failed, using templates: ${error.message}`,
+      );
+      return this.generateItemsTemplate(variable, itemCount, request);
     }
-
-    return this.generateItemsTemplate(variable, itemCount, request);
   }
 
   /**

@@ -62,6 +62,7 @@ export type DetectionTierName =
   | 'database'
   | 'direct_url'
   | 'pmc_pattern'
+  | 'core_api'         // Phase 10.195: CORE API (250M+ OA papers)
   | 'unpaywall'
   | 'publisher_html'
   | 'secondary_links'

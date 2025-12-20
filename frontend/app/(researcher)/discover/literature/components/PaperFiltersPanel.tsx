@@ -35,6 +35,7 @@ export interface PaperFilters {
   authorCountRange: [number, number];
   openAccessOnly: boolean;
   hasPdfOnly: boolean;
+  hasFullTextOnly: boolean; // Phase 10.197: Filter for papers with extracted full-text
   publicationTypes: string[];
   minimumQualityScore: number;
 }
@@ -155,6 +156,14 @@ export const PaperFiltersPanel = memo(function PaperFiltersPanel({
     onFiltersChange({
       ...filters,
       hasPdfOnly: !filters.hasPdfOnly,
+    });
+  }, [filters, onFiltersChange]);
+
+  // Phase 10.197: Full-text only filter for analysis pipelines
+  const handleHasFullTextToggle = useCallback(() => {
+    onFiltersChange({
+      ...filters,
+      hasFullTextOnly: !filters.hasFullTextOnly,
     });
   }, [filters, onFiltersChange]);
 
@@ -315,6 +324,21 @@ export const PaperFiltersPanel = memo(function PaperFiltersPanel({
                 className="text-sm font-normal cursor-pointer"
               >
                 Has PDF Available
+              </Label>
+            </div>
+
+            {/* Phase 10.197: Full-text filter for theme extraction & synthesis */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="has-full-text"
+                checked={filters.hasFullTextOnly}
+                onCheckedChange={handleHasFullTextToggle}
+              />
+              <Label
+                htmlFor="has-full-text"
+                className="text-sm font-normal cursor-pointer"
+              >
+                Full-Text Extracted (For theme analysis)
               </Label>
             </div>
           </div>

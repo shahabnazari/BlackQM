@@ -1,10 +1,61 @@
-import { forwardRef, Inject, Injectable, Logger } from '@nestjs/common';
-import axios from 'axios';
+import { forwardRef, Inject, Injectable, Logger, Optional } from '@nestjs/common';
+import { Cron, CronExpression } from '@nestjs/schedule';
+import axios, { AxiosError } from 'axios';
 import * as crypto from 'crypto';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../common/prisma.service';
 import { HtmlFullTextService } from './html-full-text.service';
 import { GrobidExtractionService } from './grobid-extraction.service';
+import { UniversalAbstractEnrichmentService } from './universal-abstract-enrichment.service';
+import { MetricsService } from '../../../common/services/metrics.service';
 import { ENRICHMENT_TIMEOUT, FULL_TEXT_TIMEOUT } from '../constants/http-config.constants';
+
+/**
+ * Phase 10.185: Netflix-Grade Extraction Error Interface
+ * Categorizes errors for smart retry and metrics tracking
+ */
+export interface ExtractionError {
+  category: 'paywall' | 'timeout' | 'network' | 'parsing' | 'rate_limit' | 'not_found' | 'circuit_breaker' | 'unknown';
+  message: string;
+  retryable: boolean;
+  publisher?: string;
+  httpStatus?: number;
+  details?: Record<string, unknown>;
+}
+
+/**
+ * Phase 10.185: Netflix-Grade Publisher Retry Configuration
+ * Adaptive retry strategies per publisher based on reliability
+ */
+interface PublisherRetryConfig {
+  maxAttempts: number;
+  initialDelayMs: number;
+  maxDelayMs: number;
+  backoffMultiplier: number;
+  jitterMs: number;
+}
+
+/**
+ * Phase 10.185: Netflix-Grade Extraction Cache Entry
+ * L1 in-memory cache for recent extractions
+ */
+interface ExtractionCacheEntry {
+  fullText: string;
+  wordCount: number;
+  source: string;
+  timestamp: number;
+}
+
+/**
+ * Phase 10.185: Netflix-Grade Circuit Breaker State
+ * Per-publisher circuit breaker for resilience
+ */
+interface CircuitBreakerState {
+  failures: number;
+  lastFailure: number;
+  state: 'closed' | 'open' | 'half-open';
+  successesSinceHalfOpen: number;
+}
 
 // PHASE 10 DAY 32: Fix pdf-parse import for proper TypeScript compatibility
 // Use dynamic import to avoid module resolution issues
@@ -54,10 +105,53 @@ export class PDFParsingService {
    * Enterprise Enhancement (Nov 18, 2025): Centralized constants for maintainability
    */
   private readonly MIN_CONTENT_LENGTH = 100; // Minimum chars for valid full-text
+
+  // Phase 10.183: Abstract enrichment constants
+  private readonly MIN_ABSTRACT_CHARS = 100; // Minimum chars for valid abstract
+  private readonly ABSTRACT_UPDATE_THRESHOLD = 1.2; // Only update if new is 20% longer
   private readonly USER_AGENT =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
   private readonly MAX_REDIRECTS = 5;
   private readonly BYTES_PER_KB = 1024;
+
+  // Phase 10.185: Netflix-Grade L1 In-Memory Cache (LRU-style with Map)
+  private readonly extractionCache = new Map<string, ExtractionCacheEntry>();
+  private readonly CACHE_MAX_SIZE = 1000;
+  private readonly CACHE_TTL_MS = 3600000; // 1 hour
+
+  // Phase 10.185: Netflix-Grade Per-Publisher Circuit Breakers
+  private readonly circuitBreakers = new Map<string, CircuitBreakerState>();
+  private readonly CIRCUIT_FAILURE_THRESHOLD = 5;
+  private readonly CIRCUIT_RESET_TIMEOUT_MS = 60000; // 1 minute
+  private readonly CIRCUIT_SUCCESS_THRESHOLD = 2;
+
+  // Phase 10.185: Netflix-Grade Publisher-Specific Retry Configs
+  private readonly publisherRetryConfigs: Map<string, PublisherRetryConfig> = new Map([
+    // Fast, reliable sources (fewer retries)
+    ['arxiv', { maxAttempts: 2, initialDelayMs: 1000, maxDelayMs: 4000, backoffMultiplier: 2, jitterMs: 200 }],
+    ['pmc', { maxAttempts: 2, initialDelayMs: 1000, maxDelayMs: 4000, backoffMultiplier: 2, jitterMs: 200 }],
+    ['plos', { maxAttempts: 2, initialDelayMs: 1000, maxDelayMs: 4000, backoffMultiplier: 2, jitterMs: 200 }],
+    // Medium reliability (standard retries)
+    ['springer', { maxAttempts: 3, initialDelayMs: 2000, maxDelayMs: 8000, backoffMultiplier: 2, jitterMs: 500 }],
+    ['nature', { maxAttempts: 3, initialDelayMs: 2000, maxDelayMs: 8000, backoffMultiplier: 2, jitterMs: 500 }],
+    ['wiley', { maxAttempts: 3, initialDelayMs: 2000, maxDelayMs: 8000, backoffMultiplier: 2, jitterMs: 500 }],
+    ['mdpi', { maxAttempts: 3, initialDelayMs: 2000, maxDelayMs: 8000, backoffMultiplier: 2, jitterMs: 500 }],
+    ['frontiers', { maxAttempts: 3, initialDelayMs: 2000, maxDelayMs: 8000, backoffMultiplier: 2, jitterMs: 500 }],
+    ['taylorfrancis', { maxAttempts: 3, initialDelayMs: 2000, maxDelayMs: 8000, backoffMultiplier: 2, jitterMs: 500 }],
+    ['jama', { maxAttempts: 3, initialDelayMs: 2000, maxDelayMs: 8000, backoffMultiplier: 2, jitterMs: 500 }],
+    // Slow, unreliable sources (more retries, longer backoff)
+    ['elsevier', { maxAttempts: 4, initialDelayMs: 3000, maxDelayMs: 16000, backoffMultiplier: 2, jitterMs: 1000 }],
+    ['ieee', { maxAttempts: 4, initialDelayMs: 3000, maxDelayMs: 16000, backoffMultiplier: 2, jitterMs: 1000 }],
+    ['sage', { maxAttempts: 3, initialDelayMs: 2500, maxDelayMs: 10000, backoffMultiplier: 2, jitterMs: 750 }],
+    // Default
+    ['unknown', { maxAttempts: 3, initialDelayMs: 2000, maxDelayMs: 8000, backoffMultiplier: 2, jitterMs: 500 }],
+  ]);
+
+  // Phase 10.185: Graceful degradation minimum word count
+  private readonly GRACEFUL_DEGRADATION_MIN_WORDS = 150;
+
+  // Phase 10.185: Optional metrics service injection
+  private metricsService?: MetricsService;
 
   constructor(
     private prisma: PrismaService,
@@ -65,7 +159,400 @@ export class PDFParsingService {
     private htmlService: HtmlFullTextService,
     @Inject(forwardRef(() => GrobidExtractionService))
     private grobidService: GrobidExtractionService,
-  ) {}
+    @Inject(forwardRef(() => UniversalAbstractEnrichmentService))
+    private universalAbstractEnrichment: UniversalAbstractEnrichmentService,
+    @Optional() metricsService?: MetricsService,
+  ) {
+    this.metricsService = metricsService;
+  }
+
+  // ==========================================================================
+  // PHASE 10.185: NETFLIX-GRADE ERROR CATEGORIZATION
+  // ==========================================================================
+
+  /**
+   * Phase 10.185: Categorize extraction error for smart retry
+   * - Detects paywall, timeout, network, rate limit, not found
+   * - Tracks publisher and HTTP status for metrics
+   * - Determines if error is retryable
+   */
+  private categorizeError(error: unknown, publisher?: string, httpStatus?: number): ExtractionError {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const lowerMessage = errorMessage.toLowerCase();
+
+    // Netflix-Grade: Detect HTTP status codes from Axios errors
+    const axiosError = error as AxiosError;
+    const statusCode = httpStatus || axiosError.response?.status;
+    const errorCode = axiosError.code;
+
+    // Paywall detection (403, subscription required)
+    if (
+      statusCode === 402 ||
+      statusCode === 403 ||
+      lowerMessage.includes('403') ||
+      lowerMessage.includes('forbidden') ||
+      lowerMessage.includes('access denied') ||
+      lowerMessage.includes('subscription required') ||
+      lowerMessage.includes('paywall') ||
+      lowerMessage.includes('purchase')
+    ) {
+      return {
+        category: 'paywall',
+        message: 'Paper is behind paywall or requires subscription',
+        retryable: false,
+        publisher,
+        httpStatus: statusCode,
+      };
+    }
+
+    // Timeout detection (408, ETIMEDOUT, ECONNABORTED)
+    if (
+      statusCode === 408 ||
+      errorCode === 'ETIMEDOUT' ||
+      errorCode === 'ECONNABORTED' ||
+      lowerMessage.includes('timeout') ||
+      lowerMessage.includes('timed out') ||
+      lowerMessage.includes('etimedout')
+    ) {
+      return {
+        category: 'timeout',
+        message: 'Extraction timed out',
+        retryable: true,
+        publisher,
+        httpStatus: statusCode,
+      };
+    }
+
+    // Network errors (ECONNREFUSED, ENOTFOUND, ECONNRESET)
+    if (
+      errorCode === 'ECONNREFUSED' ||
+      errorCode === 'ENOTFOUND' ||
+      errorCode === 'ECONNRESET' ||
+      errorCode === 'EHOSTUNREACH' ||
+      lowerMessage.includes('network') ||
+      lowerMessage.includes('connection') ||
+      lowerMessage.includes('econnrefused') ||
+      lowerMessage.includes('enotfound')
+    ) {
+      return {
+        category: 'network',
+        message: 'Network connection error',
+        retryable: true,
+        publisher,
+        httpStatus: statusCode,
+      };
+    }
+
+    // Rate limiting (429)
+    if (
+      statusCode === 429 ||
+      lowerMessage.includes('429') ||
+      lowerMessage.includes('rate limit') ||
+      lowerMessage.includes('too many requests') ||
+      lowerMessage.includes('quota exceeded')
+    ) {
+      return {
+        category: 'rate_limit',
+        message: 'Rate limit exceeded',
+        retryable: true,
+        publisher,
+        httpStatus: statusCode,
+      };
+    }
+
+    // Not found (404, 410)
+    if (
+      statusCode === 404 ||
+      statusCode === 410 ||
+      lowerMessage.includes('404') ||
+      lowerMessage.includes('not found') ||
+      lowerMessage.includes('does not exist')
+    ) {
+      return {
+        category: 'not_found',
+        message: 'Paper or URL not found',
+        retryable: false,
+        publisher,
+        httpStatus: statusCode,
+      };
+    }
+
+    // PDF parsing errors
+    if (
+      lowerMessage.includes('pdf') &&
+      (lowerMessage.includes('parse') || lowerMessage.includes('corrupt') || lowerMessage.includes('invalid'))
+    ) {
+      return {
+        category: 'parsing',
+        message: 'PDF parsing error',
+        retryable: false,
+        publisher,
+      };
+    }
+
+    // Unknown (conservative retry once)
+    return {
+      category: 'unknown',
+      message: errorMessage,
+      retryable: true,
+      publisher,
+      httpStatus: statusCode,
+    };
+  }
+
+  // ==========================================================================
+  // PHASE 10.185: NETFLIX-GRADE PUBLISHER DETECTION
+  // ==========================================================================
+
+  /**
+   * Phase 10.185: Detect publisher from URL or DOI
+   * Used for per-publisher circuit breakers and retry strategies
+   */
+  private detectPublisher(urlOrDoi: string): string {
+    if (!urlOrDoi) return 'unknown';
+
+    const lower = urlOrDoi.toLowerCase();
+
+    if (lower.includes('springer') || lower.includes('link.springer')) return 'springer';
+    if (lower.includes('nature') || lower.includes('nature.com')) return 'nature';
+    if (lower.includes('wiley') || lower.includes('onlinelibrary.wiley')) return 'wiley';
+    if (lower.includes('mdpi') || lower.includes('mdpi.com')) return 'mdpi';
+    if (lower.includes('frontiers') || lower.includes('frontiersin.org')) return 'frontiers';
+    if (lower.includes('plos') || lower.includes('plos.org')) return 'plos';
+    if (lower.includes('elsevier') || lower.includes('sciencedirect')) return 'elsevier';
+    if (lower.includes('ieee') || lower.includes('ieee.org')) return 'ieee';
+    if (lower.includes('arxiv') || lower.includes('arxiv.org')) return 'arxiv';
+    if (lower.includes('pubmed') || lower.includes('ncbi.nlm.nih.gov')) return 'pmc';
+    if (lower.includes('pmc')) return 'pmc';
+    if (lower.includes('sage') || lower.includes('sagepub.com')) return 'sage';
+    if (lower.includes('taylor') || lower.includes('tandfonline')) return 'taylorfrancis';
+    if (lower.includes('jama') || lower.includes('jamanetwork')) return 'jama';
+
+    // DOI prefix detection
+    if (lower.startsWith('10.1007/')) return 'springer';
+    if (lower.startsWith('10.1038/')) return 'nature';
+    if (lower.startsWith('10.1111/') || lower.startsWith('10.1002/')) return 'wiley';
+    if (lower.startsWith('10.3390/')) return 'mdpi';
+    if (lower.startsWith('10.3389/')) return 'frontiers';
+    if (lower.startsWith('10.1371/')) return 'plos';
+    if (lower.startsWith('10.1016/')) return 'elsevier';
+    if (lower.startsWith('10.1109/')) return 'ieee';
+    if (lower.startsWith('10.1177/')) return 'sage';
+    if (lower.startsWith('10.1080/')) return 'taylorfrancis';
+    if (lower.startsWith('10.1001/')) return 'jama';
+
+    return 'unknown';
+  }
+
+  /**
+   * Phase 10.185: Get retry config for publisher
+   */
+  getRetryConfig(publisher: string): PublisherRetryConfig {
+    return this.publisherRetryConfigs.get(publisher) || this.publisherRetryConfigs.get('unknown')!;
+  }
+
+  // ==========================================================================
+  // PHASE 10.185: NETFLIX-GRADE CIRCUIT BREAKER
+  // ==========================================================================
+
+  /**
+   * Phase 10.185: Get or create circuit breaker for publisher
+   */
+  private getCircuitBreaker(publisher: string): CircuitBreakerState {
+    if (!this.circuitBreakers.has(publisher)) {
+      this.circuitBreakers.set(publisher, {
+        failures: 0,
+        lastFailure: 0,
+        state: 'closed',
+        successesSinceHalfOpen: 0,
+      });
+    }
+    return this.circuitBreakers.get(publisher)!;
+  }
+
+  /**
+   * Phase 10.185: Check if circuit breaker allows request
+   */
+  private isCircuitBreakerOpen(publisher: string): boolean {
+    const cb = this.getCircuitBreaker(publisher);
+    const now = Date.now();
+
+    if (cb.state === 'open') {
+      // Check if reset timeout has passed
+      if (now - cb.lastFailure >= this.CIRCUIT_RESET_TIMEOUT_MS) {
+        cb.state = 'half-open';
+        cb.successesSinceHalfOpen = 0;
+        this.logger.log(`🔄 Circuit breaker HALF-OPEN for ${publisher} (reset timeout passed)`);
+        return false;
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Phase 10.185: Record circuit breaker success
+   */
+  private recordCircuitBreakerSuccess(publisher: string): void {
+    const cb = this.getCircuitBreaker(publisher);
+
+    if (cb.state === 'half-open') {
+      cb.successesSinceHalfOpen++;
+      if (cb.successesSinceHalfOpen >= this.CIRCUIT_SUCCESS_THRESHOLD) {
+        cb.state = 'closed';
+        cb.failures = 0;
+        this.logger.log(`✅ Circuit breaker CLOSED for ${publisher} (recovered)`);
+      }
+    } else if (cb.state === 'closed') {
+      // Reset failures on success
+      cb.failures = Math.max(0, cb.failures - 1);
+    }
+  }
+
+  /**
+   * Phase 10.185: Record circuit breaker failure
+   */
+  private recordCircuitBreakerFailure(publisher: string): void {
+    const cb = this.getCircuitBreaker(publisher);
+    cb.failures++;
+    cb.lastFailure = Date.now();
+
+    if (cb.state === 'half-open') {
+      // Immediately open on failure in half-open state
+      cb.state = 'open';
+      this.logger.warn(`🔴 Circuit breaker OPEN for ${publisher} (failed in half-open)`);
+      this.metricsService?.incrementCounter('fulltext_circuit_breaker_open_total', { publisher });
+    } else if (cb.state === 'closed' && cb.failures >= this.CIRCUIT_FAILURE_THRESHOLD) {
+      cb.state = 'open';
+      this.logger.warn(`🔴 Circuit breaker OPEN for ${publisher} (${cb.failures} failures)`);
+      this.metricsService?.incrementCounter('fulltext_circuit_breaker_open_total', { publisher });
+    }
+  }
+
+  // ==========================================================================
+  // PHASE 10.185: NETFLIX-GRADE L1 IN-MEMORY CACHE
+  // ==========================================================================
+
+  /**
+   * Phase 10.185: Get from L1 cache with true LRU behavior
+   * Phase 10.185.1 FIX: Move accessed items to end of Map for true LRU
+   */
+  private getFromCache(paperId: string): ExtractionCacheEntry | null {
+    const cacheKey = `paper:${paperId}`;
+    const entry = this.extractionCache.get(cacheKey);
+
+    if (!entry) return null;
+
+    // Check TTL
+    if (Date.now() - entry.timestamp > this.CACHE_TTL_MS) {
+      this.extractionCache.delete(cacheKey);
+      return null;
+    }
+
+    // Phase 10.185.1 FIX: True LRU - move accessed item to end of Map
+    // Map maintains insertion order, so delete + re-set moves to end
+    this.extractionCache.delete(cacheKey);
+    this.extractionCache.set(cacheKey, entry);
+
+    this.metricsService?.incrementCounter('fulltext_cache_hits_total', { tier: 'l1' });
+    return entry;
+  }
+
+  /**
+   * Phase 10.185: Set in L1 cache with LRU eviction
+   */
+  private setInCache(paperId: string, entry: ExtractionCacheEntry): void {
+    const cacheKey = `paper:${paperId}`;
+
+    // LRU eviction: remove oldest entries if cache is full
+    if (this.extractionCache.size >= this.CACHE_MAX_SIZE) {
+      const firstKey = this.extractionCache.keys().next().value;
+      if (firstKey) {
+        this.extractionCache.delete(firstKey);
+      }
+    }
+
+    this.extractionCache.set(cacheKey, entry);
+  }
+
+  // ==========================================================================
+  // PHASE 10.185: NETFLIX-GRADE GRACEFUL DEGRADATION
+  // ==========================================================================
+
+  /**
+   * Phase 10.185: Build fallback content from abstract + title
+   * Used when all extraction tiers fail
+   */
+  private buildFallbackContent(paper: { title?: string | null; abstract?: string | null }): {
+    text: string;
+    wordCount: number;
+    usable: boolean;
+  } {
+    const parts: string[] = [];
+
+    if (paper.title) parts.push(paper.title);
+    if (paper.abstract) parts.push(paper.abstract);
+
+    const text = parts.join('\n\n');
+    const wordCount = this.calculateWordCount(text);
+    const usable = wordCount >= this.GRACEFUL_DEGRADATION_MIN_WORDS;
+
+    return { text, wordCount, usable };
+  }
+
+  /**
+   * Phase 10.183: Check if paper needs abstract enrichment
+   *
+   * @param existingAbstract - Current abstract in database
+   * @returns true if abstract is missing or too short
+   */
+  private needsAbstractEnrichment(existingAbstract: string | null | undefined): boolean {
+    if (!existingAbstract) {
+      return true;
+    }
+    return existingAbstract.trim().length < this.MIN_ABSTRACT_CHARS;
+  }
+
+  /**
+   * Phase 10.183: Determine if new abstract should replace existing (Loophole #5 fix)
+   *
+   * Quality comparison logic:
+   * - Accept new abstract if existing is empty
+   * - Only update if new abstract is significantly longer (threshold defined by ABSTRACT_UPDATE_THRESHOLD)
+   * - Minimum chars required for valid abstract (MIN_ABSTRACT_CHARS)
+   *
+   * @param existingAbstract - Current abstract in database
+   * @param newAbstract - Newly extracted abstract
+   * @returns true if new abstract should replace existing
+   */
+  private shouldUpdateAbstract(
+    existingAbstract: string | null | undefined,
+    newAbstract: string,
+  ): boolean {
+    const newTrimmed = newAbstract.trim();
+    const newLength = newTrimmed.length;
+
+    // Minimum chars for valid abstract
+    if (newLength < this.MIN_ABSTRACT_CHARS) {
+      return false;
+    }
+
+    // Accept if existing is empty or too short
+    if (!existingAbstract) {
+      return true;
+    }
+
+    const existingTrimmed = existingAbstract.trim();
+    const existingLength = existingTrimmed.length;
+
+    if (existingLength < this.MIN_ABSTRACT_CHARS) {
+      return true;
+    }
+
+    // Only update if new abstract is significantly longer
+    return newLength > existingLength * this.ABSTRACT_UPDATE_THRESHOLD;
+  }
 
   /**
    * Fetch PDF from Unpaywall API for a given DOI
@@ -559,9 +1046,26 @@ export class PDFParsingService {
     status: 'success' | 'failed' | 'not_found';
     wordCount?: number;
     error?: string;
+    category?: string;
+    retryable?: boolean;
   }> {
+    const startTime = Date.now();
+
     try {
-      // Tier 1: Get paper from database (cache check)
+      // Phase 10.185: L1 In-Memory Cache Check (fastest)
+      const cached = this.getFromCache(paperId);
+      if (cached) {
+        this.logger.log(
+          `✅ Paper ${paperId} found in L1 cache (${cached.wordCount} words from ${cached.source})`,
+        );
+        return {
+          success: true,
+          status: 'success',
+          wordCount: cached.wordCount,
+        };
+      }
+
+      // Tier 1: Get paper from database (L2 cache check)
       const paper = await this.prisma.paper.findUnique({
         where: { id: paperId },
       });
@@ -574,16 +1078,53 @@ export class PDFParsingService {
         };
       }
 
-      // If already has full-text, skip fetching
-      if (paper.fullText && paper.fullText.length > this.MIN_CONTENT_LENGTH) {
-        this.logger.log(
-          `✅ Paper ${paperId} already has full-text (${paper.fullTextWordCount} words) - skipping fetch`,
+      // Phase 10.185: Detect publisher for circuit breaker and metrics
+      const publisher = this.detectPublisher(paper.url || paper.doi || '');
+
+      // Phase 10.185: Circuit Breaker Check
+      if (this.isCircuitBreakerOpen(publisher)) {
+        this.logger.warn(
+          `🔴 Circuit breaker OPEN for ${publisher} - failing fast for paper ${paperId}`,
         );
+        return {
+          success: false,
+          status: 'failed',
+          error: `Publisher ${publisher} is temporarily unavailable (circuit breaker open)`,
+          category: 'circuit_breaker',
+          retryable: true,
+        };
+      }
+
+      // If already has full-text in database (L2 cache), skip fetching
+      // Phase 10.185.1 FIX: Re-process if source was 'graceful_degradation' - we should try for real full-text
+      const isGracefulDegradation = paper.fullTextSource === 'graceful_degradation';
+      if (paper.fullText && paper.fullText.length > this.MIN_CONTENT_LENGTH && !isGracefulDegradation) {
+        this.logger.log(
+          `✅ Paper ${paperId} already has full-text (${paper.fullTextWordCount} words) - L2 cache hit`,
+        );
+
+        // Store in L1 cache for future requests
+        this.setInCache(paperId, {
+          fullText: paper.fullText,
+          wordCount: paper.fullTextWordCount || 0,
+          source: paper.fullTextSource || 'database',
+          timestamp: Date.now(),
+        });
+
+        this.metricsService?.incrementCounter('fulltext_cache_hits_total', { tier: 'l2' });
+
         return {
           success: true,
           status: 'success',
           wordCount: paper.fullTextWordCount || 0,
         };
+      }
+
+      // Phase 10.185.1: Log if re-processing graceful degradation paper
+      if (isGracefulDegradation) {
+        this.logger.log(
+          `🔄 Paper ${paperId} has graceful degradation content - attempting real full-text fetch`,
+        );
       }
 
       // Update status to fetching
@@ -598,6 +1139,13 @@ export class PDFParsingService {
 
       let fullText: string | null = null;
       let fullTextSource: string | null = null;
+
+      // Phase 10.183: Track extracted abstract across all tiers
+      let extractedAbstract: string | undefined;
+      let extractedAbstractWordCount: number | undefined;
+
+      // Phase 10.183: Cache PDF buffer to avoid duplicate Unpaywall API calls
+      let cachedPdfBuffer: Buffer | null = null;
 
       // Tier 2: Try PMC API first (fastest and most reliable for biomedical papers)
       // Check if we have PMID (added via PubMed search)
@@ -618,6 +1166,15 @@ export class PDFParsingService {
           this.logger.log(
             `✅ Tier 2 SUCCESS: ${htmlResult.source} provided ${htmlResult.wordCount} words`,
           );
+
+          // Phase 10.183: Loophole #1 Fix - Save HTML/PMC extracted abstract
+          if (htmlResult.abstract && this.shouldUpdateAbstract(paper.abstract, htmlResult.abstract)) {
+            extractedAbstract = htmlResult.abstract;
+            extractedAbstractWordCount = htmlResult.abstractWordCount || this.calculateWordCount(htmlResult.abstract);
+            this.logger.log(
+              `📝 Abstract extracted from ${htmlResult.source}: ${extractedAbstractWordCount} words`,
+            );
+          }
         } else {
           this.logger.log(`⚠️  Tier 2 FAILED: ${htmlResult.error}`);
         }
@@ -670,6 +1227,10 @@ export class PDFParsingService {
             if (!pdfBuffer && paper.doi && !abortController.signal.aborted) {
               try {
                 pdfBuffer = await this.fetchPDF(paper.doi);
+                // Cache for potential reuse in Tier 3 (avoids duplicate API call)
+                if (pdfBuffer) {
+                  cachedPdfBuffer = pdfBuffer;
+                }
               } catch (error: unknown) {
                 const errorMsg = error instanceof Error ? error.message : 'Unknown error';
                 this.logger.warn(`⚠️  Unpaywall PDF fetch failed: ${errorMsg}`);
@@ -689,6 +1250,16 @@ export class PDFParsingService {
                 this.logger.log(
                   `✅ Tier 2.5 SUCCESS: GROBID extracted ${wordCount} words (${grobidResult.processingTime}ms)`,
                 );
+
+                // Phase 10.183: Loophole #3 Fix - Save GROBID extracted abstract
+                const grobidAbstract = grobidResult.metadata?.abstract;
+                if (grobidAbstract && !extractedAbstract && this.shouldUpdateAbstract(paper.abstract, grobidAbstract)) {
+                  extractedAbstract = grobidAbstract;
+                  extractedAbstractWordCount = this.calculateWordCount(grobidAbstract);
+                  this.logger.log(
+                    `📝 Abstract extracted from GROBID: ${extractedAbstractWordCount} words`,
+                  );
+                }
               } else {
                 this.logger.log(`⚠️  Tier 2.5 FAILED: ${grobidResult.error || 'Unknown error'}`);
               }
@@ -706,12 +1277,16 @@ export class PDFParsingService {
         this.logger.log(`⏭️  Tier 2.5 SKIPPED: No PDF URL or DOI available for GROBID`);
       }
 
-      // Tier 3: Try PDF via Unpaywall if HTML failed
+      // Tier 3: Try PDF via Unpaywall if HTML failed (uses cached buffer if available)
       if (!fullText && paper.doi) {
         this.logger.log(`🔍 Tier 3: Attempting PDF fetch via Unpaywall...`);
-        const pdfBuffer = await this.fetchPDF(paper.doi);
+        // Use cached PDF buffer from Tier 2.5 if available (avoids duplicate API call)
+        const pdfBuffer = cachedPdfBuffer || await this.fetchPDF(paper.doi);
 
         if (pdfBuffer) {
+          if (cachedPdfBuffer) {
+            this.logger.log(`♻️  Using cached PDF buffer from Tier 2.5`);
+          }
           const rawText = await this.extractText(pdfBuffer);
           if (rawText) {
             fullText = this.cleanText(rawText);
@@ -809,17 +1384,139 @@ export class PDFParsingService {
         this.logger.log(`⏭️  Tier 4 SKIPPED: No URL available for direct PDF`);
       }
 
-      // If all tiers failed, mark as failed
+      // Phase 10.183: Loophole #4 Fix - Try UniversalAbstractEnrichmentService as fallback
+      // This runs regardless of full-text success, if we still don't have a good abstract
+      if (!extractedAbstract && this.needsAbstractEnrichment(paper.abstract)) {
+        this.logger.log(`🔍 Attempting universal abstract enrichment as fallback...`);
+        try {
+          const enrichmentResult = await this.universalAbstractEnrichment.enrichAbstract(
+            paper.doi || undefined,
+            paper.url || undefined,
+            pmid,
+          );
+
+          if (enrichmentResult.abstract && enrichmentResult.abstract.length > 0) {
+            if (this.shouldUpdateAbstract(paper.abstract, enrichmentResult.abstract)) {
+              extractedAbstract = enrichmentResult.abstract;
+              extractedAbstractWordCount = enrichmentResult.wordCount || this.calculateWordCount(enrichmentResult.abstract);
+              this.logger.log(
+                `📝 Abstract enriched via ${enrichmentResult.source}: ${extractedAbstractWordCount} words`,
+              );
+            }
+          } else {
+            this.logger.log(`⚠️  Universal abstract enrichment returned no result`);
+          }
+        } catch (error: unknown) {
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          this.logger.warn(`⚠️  Universal abstract enrichment error: ${errorMsg}`);
+        }
+      }
+
+      // If all tiers failed, try graceful degradation
       if (!fullText) {
-        await this.prisma.paper.update({
-          where: { id: paperId },
-          data: { fullTextStatus: 'failed' },
+        // Phase 10.185: Netflix-Grade Graceful Degradation
+        // Try to use abstract + title as fallback content
+        const fallback = this.buildFallbackContent({
+          title: paper.title,
+          abstract: extractedAbstract || paper.abstract,
         });
+
+        if (fallback.usable) {
+          // Graceful degradation successful - use abstract + title
+          this.logger.log(
+            `✅ Graceful degradation: Using abstract + title (${fallback.wordCount} words) for paper ${paperId}`,
+          );
+
+          const fallbackHash = this.calculateHash(fallback.text);
+
+          // Phase 10.185.1 FIX: Set hasFullText=false for graceful degradation
+          // This allows future re-processing when real full-text becomes available
+          await this.prisma.paper.update({
+            where: { id: paperId },
+            data: {
+              fullText: fallback.text,
+              fullTextStatus: 'success',
+              fullTextSource: 'graceful_degradation',
+              fullTextFetchedAt: new Date(),
+              fullTextWordCount: fallback.wordCount,
+              fullTextHash: fallbackHash,
+              wordCount: fallback.wordCount,
+              hasFullText: false, // Phase 10.185.1: NOT real full-text, just abstract+title
+              ...(extractedAbstract && {
+                abstract: extractedAbstract,
+                abstractWordCount: extractedAbstractWordCount,
+              }),
+            },
+          });
+
+          // Track metrics
+          this.metricsService?.incrementCounter('fulltext_graceful_degradation_total', { publisher });
+          this.recordCircuitBreakerSuccess(publisher);
+
+          // Store in L1 cache
+          this.setInCache(paperId, {
+            fullText: fallback.text,
+            wordCount: fallback.wordCount,
+            source: 'graceful_degradation',
+            timestamp: Date.now(),
+          });
+
+          const duration = Date.now() - startTime;
+          this.metricsService?.recordHistogram('fulltext_extraction_duration_seconds', duration / 1000, {
+            publisher,
+            source: 'graceful_degradation',
+            status: 'success',
+          });
+
+          return {
+            success: true,
+            status: 'success',
+            wordCount: fallback.wordCount,
+          };
+        }
+
+        // Complete failure - mark as failed
+        this.recordCircuitBreakerFailure(publisher);
+
+        // Even if full-text failed, still save any extracted abstract
+        if (extractedAbstract) {
+          await this.prisma.paper.update({
+            where: { id: paperId },
+            data: {
+              fullTextStatus: 'failed',
+              abstract: extractedAbstract,
+              abstractWordCount: extractedAbstractWordCount,
+            },
+          });
+          this.logger.log(
+            `📝 Full-text failed but abstract saved: ${extractedAbstractWordCount} words`,
+          );
+        } else {
+          await this.prisma.paper.update({
+            where: { id: paperId },
+            data: { fullTextStatus: 'failed' },
+          });
+        }
+
+        // Track failure metrics
+        const duration = Date.now() - startTime;
+        this.metricsService?.recordHistogram('fulltext_extraction_duration_seconds', duration / 1000, {
+          publisher,
+          status: 'failed',
+        });
+        this.metricsService?.incrementCounter('fulltext_extraction_total', {
+          publisher,
+          status: 'failed',
+          category: 'all_tiers_failed',
+        });
+
         return {
           success: false,
           status: 'failed',
           error:
             'All full-text fetching methods failed (PMC, HTML scraping, Unpaywall PDF, direct publisher PDF)',
+          category: 'all_tiers_failed',
+          retryable: true,
         };
       }
 
@@ -843,30 +1540,70 @@ export class PDFParsingService {
 
       // Step 5: Recalculate comprehensive word count (title + abstract + fullText)
       const titleWords = this.calculateWordCount(paper.title || '');
-      const abstractWords =
+      // Phase 10.183: Use extracted abstract word count if available
+      const abstractWords = extractedAbstractWordCount ||
         paper.abstractWordCount ||
         this.calculateWordCount(paper.abstract || '');
       const totalWordCount = titleWords + abstractWords + fullTextWordCount;
 
       // Step 6: Store in database with correct source
+      // Phase 10.183: Include abstract fields if extracted (Loopholes #1, #2, #3 final save)
+      const updateData: Prisma.PaperUpdateInput = {
+        fullText,
+        fullTextStatus: 'success',
+        fullTextSource, // 'pmc', 'html_scrape', 'unpaywall', 'grobid', or 'direct_pdf'
+        fullTextFetchedAt: new Date(),
+        fullTextWordCount,
+        fullTextHash,
+        wordCount: totalWordCount,
+        wordCountExcludingRefs: totalWordCount, // Already excluded in cleanText/HTML parsing
+        hasFullText: true,
+      };
+
+      // Include extracted abstract if we have one
+      if (extractedAbstract) {
+        updateData.abstract = extractedAbstract;
+        updateData.abstractWordCount = extractedAbstractWordCount;
+        this.logger.log(
+          `📝 Saving enriched abstract: ${extractedAbstractWordCount} words`,
+        );
+      }
+
       await this.prisma.paper.update({
         where: { id: paperId },
-        data: {
-          fullText,
-          fullTextStatus: 'success',
-          fullTextSource, // 'pmc', 'html_scrape', 'unpaywall', or 'direct_pdf'
-          fullTextFetchedAt: new Date(),
-          fullTextWordCount,
-          fullTextHash,
-          wordCount: totalWordCount,
-          wordCountExcludingRefs: totalWordCount, // Already excluded in cleanText/HTML parsing
-          hasFullText: true,
-        },
+        data: updateData,
       });
 
+      const abstractStatus = extractedAbstract
+        ? ` + ${extractedAbstractWordCount} word abstract`
+        : '';
       this.logger.log(
-        `✅ Successfully processed full-text for paper ${paperId}: ${fullTextWordCount} words from ${fullTextSource} (total: ${totalWordCount})`,
+        `✅ Successfully processed full-text for paper ${paperId}: ${fullTextWordCount} words from ${fullTextSource}${abstractStatus} (total: ${totalWordCount})`,
       );
+
+      // Phase 10.185: Record circuit breaker success
+      this.recordCircuitBreakerSuccess(publisher);
+
+      // Phase 10.185: Store in L1 cache
+      this.setInCache(paperId, {
+        fullText,
+        wordCount: fullTextWordCount,
+        source: fullTextSource || 'unknown',
+        timestamp: Date.now(),
+      });
+
+      // Phase 10.185: Track success metrics
+      const duration = Date.now() - startTime;
+      this.metricsService?.recordHistogram('fulltext_extraction_duration_seconds', duration / 1000, {
+        publisher,
+        source: fullTextSource || 'unknown',
+        status: 'success',
+      });
+      this.metricsService?.incrementCounter('fulltext_extraction_total', {
+        publisher,
+        source: fullTextSource || 'unknown',
+        status: 'success',
+      });
 
       return {
         success: true,
@@ -874,10 +1611,27 @@ export class PDFParsingService {
         wordCount: fullTextWordCount,
       };
     } catch (error) {
+      // Phase 10.185: Categorize error for smart retry
+      const publisher = 'unknown'; // Can't detect without paper
+      const categorizedError = this.categorizeError(error, publisher);
+      const duration = Date.now() - startTime;
+
       this.logger.error(
-        `Error processing full-text for paper ${paperId}:`,
+        `Error processing full-text for paper ${paperId} [${categorizedError.category}]:`,
         error,
       );
+
+      // Track error metrics
+      this.metricsService?.recordHistogram('fulltext_extraction_duration_seconds', duration / 1000, {
+        publisher,
+        status: 'failed',
+        category: categorizedError.category,
+      });
+      this.metricsService?.incrementCounter('fulltext_extraction_errors_total', {
+        publisher,
+        category: categorizedError.category,
+        retryable: categorizedError.retryable ? 'true' : 'false',
+      });
 
       // Update status to failed
       await this.prisma.paper
@@ -890,7 +1644,9 @@ export class PDFParsingService {
       return {
         success: false,
         status: 'failed',
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: categorizedError.message,
+        category: categorizedError.category,
+        retryable: categorizedError.retryable,
       };
     }
   }
@@ -972,5 +1728,144 @@ export class PDFParsingService {
     });
 
     return grouped;
+  }
+
+  // ==========================================================================
+  // PHASE 10.185: NETFLIX-GRADE SCHEDULED STUCK JOB CLEANUP
+  // ==========================================================================
+
+  /**
+   * Phase 10.185: Scheduled automatic cleanup of stuck jobs and expired cache
+   * Runs every 10 minutes to clean up stuck 'fetching' jobs and expired cache entries
+   * Netflix-Grade: Automatic, self-healing, with metrics
+   */
+  @Cron(CronExpression.EVERY_10_MINUTES)
+  async scheduledCleanupStuckJobs(): Promise<void> {
+    const startTime = Date.now();
+
+    try {
+      // Phase 10.185.1: Cleanup expired L1 cache entries
+      const expiredCacheCount = this.cleanupExpiredCacheEntries();
+      if (expiredCacheCount > 0) {
+        this.logger.log(`🧹 Cleaned up ${expiredCacheCount} expired cache entries`);
+        this.metricsService?.incrementCounter('fulltext_cache_expired_cleaned_total', {
+          count: String(expiredCacheCount),
+        });
+      }
+
+      // Cleanup stuck fetching jobs
+      const cleaned = await this.cleanupStuckFetchingJobs(5);
+
+      if (cleaned > 0) {
+        this.metricsService?.incrementCounter('fulltext_stuck_jobs_cleaned_total', {
+          timeout_minutes: '5',
+        });
+
+        this.logger.warn(`🧹 Scheduled cleanup: ${cleaned} stuck jobs cleaned up`, {
+          cleaned,
+          durationMs: Date.now() - startTime,
+        });
+      }
+    } catch (error) {
+      this.metricsService?.incrementCounter('fulltext_cleanup_errors_total');
+      this.logger.error(
+        `❌ Scheduled cleanup failed: ${error instanceof Error ? error.message : String(error)}`,
+        { error: error instanceof Error ? error.stack : String(error) },
+      );
+    }
+  }
+
+  /**
+   * Phase 10.185.1: Cleanup expired L1 cache entries
+   * Removes entries older than CACHE_TTL_MS to prevent stale data buildup
+   * @returns Number of entries cleaned up
+   */
+  private cleanupExpiredCacheEntries(): number {
+    const now = Date.now();
+    let cleaned = 0;
+
+    for (const [key, entry] of this.extractionCache) {
+      if (now - entry.timestamp > this.CACHE_TTL_MS) {
+        this.extractionCache.delete(key);
+        cleaned++;
+      }
+    }
+
+    return cleaned;
+  }
+
+  /**
+   * Cleanup stuck 'fetching' jobs
+   *
+   * Phase 10.184: Marks papers stuck in 'fetching' status as 'failed'
+   * after a timeout period (default: 5 minutes)
+   *
+   * Phase 10.185: Enhanced with metrics tracking
+   *
+   * Use Case:
+   * - Jobs that crashed or timed out without updating status
+   * - Prevents papers from appearing "in progress" indefinitely
+   * - Allows users to retry extraction
+   *
+   * @param timeoutMinutes - Minutes after which 'fetching' status is considered stuck (default: 5)
+   * @returns Number of papers cleaned up
+   */
+  async cleanupStuckFetchingJobs(timeoutMinutes: number = 5): Promise<number> {
+    const timeoutMs = timeoutMinutes * 60 * 1000;
+    const cutoffTime = new Date(Date.now() - timeoutMs);
+
+    this.logger.log(
+      `🧹 Cleaning up stuck 'fetching' jobs older than ${timeoutMinutes} minutes...`,
+    );
+
+    try {
+      // Find stuck papers
+      const stuckPapers = await this.prisma.paper.findMany({
+        where: {
+          fullTextStatus: 'fetching',
+          updatedAt: { lt: cutoffTime },
+        },
+        select: { id: true, title: true, updatedAt: true },
+      });
+
+      if (stuckPapers.length === 0) {
+        this.logger.log('✅ No stuck jobs found');
+        return 0;
+      }
+
+      this.logger.log(`🔍 Found ${stuckPapers.length} stuck jobs`);
+
+      // Log each stuck paper
+      for (const paper of stuckPapers) {
+        const stuckDuration = Math.round(
+          (Date.now() - paper.updatedAt.getTime()) / 60000,
+        );
+        this.logger.log(
+          `  - ${paper.id}: "${paper.title?.substring(0, 50)}..." stuck for ${stuckDuration} minutes`,
+        );
+      }
+
+      // Batch update all stuck papers to 'failed'
+      const result = await this.prisma.paper.updateMany({
+        where: {
+          fullTextStatus: 'fetching',
+          updatedAt: { lt: cutoffTime },
+        },
+        data: {
+          fullTextStatus: 'failed',
+          updatedAt: new Date(), // Update timestamp
+        },
+      });
+
+      this.logger.log(
+        `✅ Cleaned up ${result.count} stuck jobs (marked as 'failed')`,
+      );
+
+      return result.count;
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`❌ Failed to cleanup stuck jobs: ${errorMsg}`);
+      throw error;
+    }
   }
 }

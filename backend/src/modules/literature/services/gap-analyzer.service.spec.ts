@@ -8,13 +8,14 @@ import {
   TopicModel,
 } from './gap-analyzer.service';
 import { PrismaService } from '../../../common/prisma.service';
-import { OpenAIService } from '../../ai/services/openai.service';
+// Phase 10.185: Migrated to UnifiedAIService
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { ThemeExtractionService } from './theme-extraction.service';
 
 describe('GapAnalyzerService', () => {
   let service: GapAnalyzerService;
   let prismaService: PrismaService;
-  let openAIService: OpenAIService;
+  let unifiedAIService: UnifiedAIService;
   let themeExtractionService: ThemeExtractionService;
 
   const mockPrismaService = {
@@ -23,8 +24,16 @@ describe('GapAnalyzerService', () => {
     },
   };
 
-  const mockOpenAIService = {
-    generateCompletion: jest.fn(),
+  // Phase 10.185: Mock UnifiedAIService instead of OpenAIService
+  const mockUnifiedAIService = {
+    generateCompletion: jest.fn().mockResolvedValue({
+      content: '[]',
+      tokens: 50,
+      responseTime: 100,
+      cached: false,
+      cost: 0.001,
+      provider: 'groq',
+    }),
   };
 
   const mockThemeExtractionService = {
@@ -69,7 +78,8 @@ describe('GapAnalyzerService', () => {
       providers: [
         GapAnalyzerService,
         { provide: PrismaService, useValue: mockPrismaService },
-        { provide: OpenAIService, useValue: mockOpenAIService },
+        // Phase 10.185: Use UnifiedAIService instead of OpenAIService
+        { provide: UnifiedAIService, useValue: mockUnifiedAIService },
         {
           provide: ThemeExtractionService,
           useValue: mockThemeExtractionService,
@@ -79,7 +89,7 @@ describe('GapAnalyzerService', () => {
 
     service = module.get<GapAnalyzerService>(GapAnalyzerService);
     prismaService = module.get<PrismaService>(PrismaService);
-    openAIService = module.get<OpenAIService>(OpenAIService);
+    unifiedAIService = module.get<UnifiedAIService>(UnifiedAIService);
     themeExtractionService = module.get<ThemeExtractionService>(
       ThemeExtractionService,
     );
@@ -101,7 +111,7 @@ describe('GapAnalyzerService', () => {
           weight: 8,
         },
       ]);
-      mockOpenAIService.generateCompletion.mockResolvedValue({
+      mockUnifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify([
           {
             title: 'Explainable AI for Clinical Decision Support',
@@ -150,7 +160,7 @@ describe('GapAnalyzerService', () => {
           prevalence: 0.03,
         },
       ]);
-      mockOpenAIService.generateCompletion.mockRejectedValue(
+      mockUnifiedAIService.generateCompletion.mockRejectedValue(
         new Error('AI service unavailable'),
       );
 
@@ -404,7 +414,7 @@ describe('GapAnalyzerService', () => {
         },
       ];
 
-      mockOpenAIService.generateCompletion.mockResolvedValue({
+      mockUnifiedAIService.generateCompletion.mockResolvedValue({
         content:
           'Rationale: High impact opportunity\nApproach: Develop new methods\nChallenges: Technical complexity',
         tokens: 150,
@@ -450,7 +460,7 @@ describe('GapAnalyzerService', () => {
         },
       ];
 
-      mockOpenAIService.generateCompletion.mockResolvedValue({
+      mockUnifiedAIService.generateCompletion.mockResolvedValue({
         content: 'Generic opportunity analysis',
         tokens: 100,
         responseTime: 400,
@@ -480,7 +490,7 @@ describe('GapAnalyzerService', () => {
         },
       ];
 
-      mockOpenAIService.generateCompletion.mockRejectedValue(
+      mockUnifiedAIService.generateCompletion.mockRejectedValue(
         new Error('AI error'),
       );
 
@@ -508,7 +518,7 @@ describe('GapAnalyzerService', () => {
 
       mockPrismaService.paper.findMany.mockResolvedValue(largePaperSet);
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
-      mockOpenAIService.generateCompletion.mockResolvedValue({
+      mockUnifiedAIService.generateCompletion.mockResolvedValue({
         content: '[]',
         tokens: 50,
         responseTime: 200,
@@ -526,7 +536,7 @@ describe('GapAnalyzerService', () => {
     it('should handle concurrent requests efficiently', async () => {
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
-      mockOpenAIService.generateCompletion.mockResolvedValue({
+      mockUnifiedAIService.generateCompletion.mockResolvedValue({
         content: '[]',
         tokens: 50,
         responseTime: 200,
@@ -570,7 +580,7 @@ describe('GapAnalyzerService', () => {
     it('should handle malformed AI responses', async () => {
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
-      mockOpenAIService.generateCompletion.mockResolvedValue({
+      mockUnifiedAIService.generateCompletion.mockResolvedValue({
         content: 'Not valid JSON response',
       });
 
@@ -585,7 +595,7 @@ describe('GapAnalyzerService', () => {
     it('should score gaps based on multiple factors', async () => {
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
-      mockOpenAIService.generateCompletion.mockResolvedValue({
+      mockUnifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify([
           {
             title: 'High Impact Gap',
@@ -613,7 +623,7 @@ describe('GapAnalyzerService', () => {
     it('should adjust scores for emerging trends', async () => {
       mockPrismaService.paper.findMany.mockResolvedValue(mockPapers);
       mockThemeExtractionService.extractThemes.mockResolvedValue([]);
-      mockOpenAIService.generateCompletion.mockResolvedValue({
+      mockUnifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify([
           {
             title: 'Emerging Tech Gap',

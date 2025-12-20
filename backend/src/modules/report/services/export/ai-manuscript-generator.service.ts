@@ -21,9 +21,8 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/common/prisma.service';
-import OpenAI from 'openai';
+import { UnifiedAIService } from '../../../ai/services/unified-ai.service';
 import { Citation, CitationManagerService } from './citation-manager.service';
 import { ProvenanceChain, ReportSection } from '../report-generator.service';
 
@@ -55,17 +54,12 @@ export interface ManuscriptSection {
 @Injectable()
 export class AIManuscriptGeneratorService {
   private readonly logger = new Logger(AIManuscriptGeneratorService.name);
-  private openai: OpenAI;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
+    private readonly unifiedAIService: UnifiedAIService,
     private readonly citationManager: CitationManagerService,
-  ) {
-    this.openai = new OpenAI({
-      apiKey: this.config.get('OPENAI_API_KEY'),
-    });
-  }
+  ) {}
 
   /**
    * Generate complete manuscript using AI
@@ -215,14 +209,14 @@ Requirements:
 
 Write the Introduction section:`;
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
+    // Phase 10.195: Use UnifiedAIService for Introduction generation
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      model: 'smart',
       temperature: 0.7,
-      max_tokens: 800,
+      maxTokens: 800,
     });
 
-    const content = completion.choices[0]?.message?.content || '';
+    const content = response.content || '';
 
     return {
       section: 'Introduction',
@@ -308,14 +302,14 @@ Requirements:
 
 Write the Literature Review section:`;
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
+    // Phase 10.195: Use UnifiedAIService for Literature Review generation
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      model: 'smart',
       temperature: 0.7,
-      max_tokens: 1500,
+      maxTokens: 1500,
     });
 
-    const content = completion.choices[0]?.message?.content || '';
+    const content = response.content || '';
 
     return {
       section: 'Literature Review',
@@ -391,14 +385,14 @@ Requirements:
 
 Write the Methods section:`;
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
+    // Phase 10.195: Use UnifiedAIService for Methods generation
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      model: 'smart',
       temperature: 0.6,
-      max_tokens: 1200,
+      maxTokens: 1200,
     });
 
-    const content = completion.choices[0]?.message?.content || '';
+    const content = response.content || '';
 
     return {
       section: 'Methods',
@@ -456,14 +450,14 @@ Requirements:
 
 Write the Results section template:`;
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
+    // Phase 10.195: Use UnifiedAIService for Results generation
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      model: 'smart',
       temperature: 0.5,
-      max_tokens: 1400,
+      maxTokens: 1400,
     });
 
-    const content = completion.choices[0]?.message?.content || '';
+    const content = response.content || '';
 
     return {
       section: 'Results',
@@ -526,14 +520,14 @@ Requirements:
 
 Write the Discussion section:`;
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
+    // Phase 10.195: Use UnifiedAIService for Discussion generation
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      model: 'smart',
       temperature: 0.7,
-      max_tokens: 1500,
+      maxTokens: 1500,
     });
 
-    const content = completion.choices[0]?.message?.content || '';
+    const content = response.content || '';
 
     // Include citations from literature
     const citations: Citation[] = papers.slice(0, 10).map((paper: any) => ({
@@ -589,14 +583,14 @@ Requirements:
 
 Write the Conclusion section:`;
 
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [{ role: 'user', content: prompt }],
+    // Phase 10.195: Use UnifiedAIService for Conclusion generation
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      model: 'smart',
       temperature: 0.7,
-      max_tokens: 500,
+      maxTokens: 500,
     });
 
-    const content = completion.choices[0]?.message?.content || '';
+    const content = response.content || '';
 
     return {
       section: 'Conclusion',

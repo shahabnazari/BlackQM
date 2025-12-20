@@ -387,7 +387,9 @@ describe('MatchScoreBadge Component', () => {
       // Phase 10.155: Score shown prominently - may appear in button and tooltip
       const scoreElements = screen.getAllByText('75');
       expect(scoreElements.length).toBeGreaterThan(0);
-      expect(screen.getByText('/100')).toBeInTheDocument();
+      // Phase 10.180: Each score now shows /100, so multiple elements exist
+      const per100Elements = screen.getAllByText('/100');
+      expect(per100Elements.length).toBeGreaterThan(0);
     });
 
     it('should display BM25 breakdown in relevance column', () => {

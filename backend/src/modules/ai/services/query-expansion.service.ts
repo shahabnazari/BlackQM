@@ -15,7 +15,28 @@
  */
 
 import { Injectable, Logger } from '@nestjs/common';
-import { OpenAIService } from './openai.service';
+import { UnifiedAIService } from './unified-ai.service';
+
+// ============================================================================
+// Phase 10.185 Week 3: System Prompts for Query Expansion
+// ============================================================================
+
+const QUERY_EXPANSION_SYSTEM_PROMPT = `You are an expert academic research query optimization specialist.
+
+Your role is to:
+1. Detect and correct spelling errors in research queries
+2. Expand vague queries into specific research angles
+3. Suggest related academic terminology and methodological keywords
+4. Transform broad topics into actionable research queries
+
+Guidelines:
+- Always prioritize academic and scholarly terminology
+- Include research methodology keywords when relevant
+- Consider interdisciplinary connections
+- Maintain query precision while expanding coverage
+- Flag overly broad queries that need narrowing
+
+Output must be valid JSON as specified in the prompt.`;
 
 export interface ExpandedQuery {
   expanded: string;
@@ -35,7 +56,7 @@ export class QueryExpansionService {
     new Map();
   private readonly CACHE_TTL = 1 * 60 * 60 * 1000; // 1 hour
 
-  constructor(private readonly openaiService: OpenAIService) {}
+  constructor(private readonly unifiedAIService: UnifiedAIService) {}
 
   /**
    * Expand search query with AI
@@ -56,11 +77,14 @@ export class QueryExpansionService {
     const prompt = this.buildExpansionPrompt(query, domain);
 
     try {
-      const response = await this.openaiService.generateCompletion(prompt, {
-        model: 'fast', // GPT-3.5 is sufficient for this
+      // Phase 10.195: Use jsonMode to guarantee valid JSON response
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'fast',
         temperature: 0.4,
         maxTokens: 400,
-        cache: false,
+        cache: true,
+        systemPrompt: QUERY_EXPANSION_SYSTEM_PROMPT,
+        jsonMode: true, // Force JSON output format
       });
 
       const result = this.parseExpansionResponse(response.content);
@@ -106,22 +130,20 @@ Focus on:
 Return JSON: {"terms": ["term1", "term2", ...], "confidence": [0.9, 0.8, ...]}`;
 
     try {
-      const response = await this.openaiService.generateCompletion(prompt, {
+      // Phase 10.195: Use jsonMode for guaranteed JSON output
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'fast',
         temperature: 0.3,
         maxTokens: 300,
         cache: true,
+        systemPrompt: QUERY_EXPANSION_SYSTEM_PROMPT,
+        jsonMode: true,
       });
 
-      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        return { terms: [], confidence: [] };
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(response.content);
       return {
         terms: parsed.terms || [],
-        confidence: parsed.confidence || parsed.terms.map(() => 0.7),
+        confidence: parsed.confidence || (parsed.terms || []).map(() => 0.7),
       };
     } catch (error: any) {
       this.logger.error(
@@ -150,19 +172,17 @@ For each angle:
 Return JSON: {"narrowed": ["angle1", "angle2", "angle3"], "reasoning": "why narrowing helps"}`;
 
     try {
-      const response = await this.openaiService.generateCompletion(prompt, {
+      // Phase 10.195: Use jsonMode for guaranteed JSON output
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'fast',
         temperature: 0.5,
         maxTokens: 300,
         cache: true,
+        systemPrompt: QUERY_EXPANSION_SYSTEM_PROMPT,
+        jsonMode: true,
       });
 
-      const jsonMatch = response.content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        return { narrowed: [], reasoning: '' };
-      }
-
-      const parsed = JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(response.content);
       return {
         narrowed: parsed.narrowed || [],
         reasoning: parsed.reasoning || '',
@@ -232,38 +252,39 @@ Return JSON:
   }
 
   /**
-   * Parse AI expansion response
+   * Convert parsed JSON to ExpandedQuery with defaults (DRY helper)
+   * Phase 10.195: With jsonMode, response is guaranteed to be valid JSON
    */
+  private toExpandedQuery(parsed: Record<string, unknown>): ExpandedQuery {
+    return {
+      expanded: (parsed.expanded as string) || '',
+      suggestions: (parsed.suggestions as string[]) || [],
+      isTooVague: (parsed.isTooVague as boolean) || false,
+      narrowingQuestions: (parsed.narrowingQuestions as string[]) || [],
+      confidence: (parsed.confidence as number) || 0.7,
+      relatedTerms: (parsed.relatedTerms as string[]) || [],
+      correctedQuery: (parsed.correctedQuery as string) || undefined,
+      hadSpellingErrors: (parsed.hadSpellingErrors as boolean) || false,
+    };
+  }
+
   private parseExpansionResponse(content: string): ExpandedQuery {
+    // Primary: Direct JSON parse (jsonMode should guarantee valid JSON)
     try {
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No JSON in response');
+      return this.toExpandedQuery(JSON.parse(content));
+    } catch (primaryError: any) {
+      // Fallback: Extract JSON from prose response (non-JSON mode providers)
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return this.toExpandedQuery(JSON.parse(jsonMatch[0]));
+        }
+      } catch {
+        // Ignore fallback errors
       }
 
-      const parsed = JSON.parse(jsonMatch[0]);
-
-      return {
-        expanded: parsed.expanded || '',
-        suggestions: parsed.suggestions || [],
-        isTooVague: parsed.isTooVague || false,
-        narrowingQuestions: parsed.narrowingQuestions || [],
-        confidence: parsed.confidence || 0.7,
-        relatedTerms: parsed.relatedTerms || [],
-        correctedQuery: parsed.correctedQuery || undefined,
-        hadSpellingErrors: parsed.hadSpellingErrors || false,
-      };
-    } catch (error: any) {
-      this.logger.warn(`Failed to parse expansion response: ${error.message}`);
-      return {
-        expanded: '',
-        suggestions: [],
-        isTooVague: false,
-        narrowingQuestions: [],
-        confidence: 0.5,
-        relatedTerms: [],
-        hadSpellingErrors: false,
-      };
+      this.logger.warn(`Failed to parse expansion response: ${primaryError.message}`);
+      return this.toExpandedQuery({}); // Returns defaults
     }
   }
 

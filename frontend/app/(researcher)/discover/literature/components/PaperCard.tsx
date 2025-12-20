@@ -182,6 +182,8 @@ function PaperCardComponent({
             isExtracted={isExtracted}
             SourceIcon={SourceIcon}
             onToggleSelection={handleToggleSelection}
+            hasFullText={paper.hasFullText ?? false}
+            fullTextStatus={paper.fullTextStatus}
           />
 
           {/* Paper Metadata (year, venue, citations, word count) */}
@@ -287,12 +289,15 @@ export const PaperCard = React.memo(PaperCardComponent, (prev, next) => {
 
   // Check key paper properties that affect display
   // Phase 10.147: Include overallScore in comparison (critical for composite scoring)
+  // Phase 10.196: Include hasFullText and fullTextStatus for full-text indicator
   if (
     prev.paper.neuralRelevanceScore !== next.paper.neuralRelevanceScore ||
     prev.paper.neuralRank !== next.paper.neuralRank ||
     prev.paper.qualityScore !== next.paper.qualityScore ||
     prev.paper.overallScore !== next.paper.overallScore ||
-    prev.paper.citationCount !== next.paper.citationCount
+    prev.paper.citationCount !== next.paper.citationCount ||
+    prev.paper.hasFullText !== next.paper.hasFullText ||
+    prev.paper.fullTextStatus !== next.paper.fullTextStatus
   ) {
     return false;
   }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnModuleInit } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OpenAIService } from './services/openai.service';
 import { AICostService } from './services/ai-cost.service';
@@ -10,10 +10,17 @@ import { QueryExpansionService } from './services/query-expansion.service'; // P
 import { AIController } from './controllers/ai.controller';
 import { PrismaService } from '../../common/prisma.service';
 
+// Phase 10.190: Netflix-Grade Unified AI Service
+import { UnifiedAIService } from './services/unified-ai.service';
+import { GroqProvider } from './services/providers/groq.provider';
+import { GeminiProvider } from './services/providers/gemini.provider';
+import { OpenAIProvider } from './services/providers/openai.provider';
+
 @Module({
   imports: [ScheduleModule.forRoot()],
   controllers: [AIController],
   providers: [
+    // Existing services
     OpenAIService,
     AICostService,
     StatementGeneratorService,
@@ -22,8 +29,15 @@ import { PrismaService } from '../../common/prisma.service';
     VideoRelevanceService,
     QueryExpansionService,
     PrismaService,
+
+    // Phase 10.190: Unified AI Service with multi-provider support
+    UnifiedAIService,
+    GroqProvider,
+    GeminiProvider,
+    OpenAIProvider,
   ],
   exports: [
+    // Existing exports
     OpenAIService,
     AICostService,
     StatementGeneratorService,
@@ -31,6 +45,26 @@ import { PrismaService } from '../../common/prisma.service';
     QuestionnaireGeneratorService,
     VideoRelevanceService,
     QueryExpansionService,
+
+    // Phase 10.190: Export unified AI service
+    UnifiedAIService,
+    GroqProvider,
+    GeminiProvider,
+    OpenAIProvider,
   ],
 })
-export class AIModule {}
+export class AIModule implements OnModuleInit {
+  constructor(
+    private readonly unifiedAIService: UnifiedAIService,
+    private readonly aiCostService: AICostService,
+  ) {}
+
+  /**
+   * Phase 10.185 Week 1: Wire AICostService to UnifiedAIService
+   * Enables budget checking and cost persistence
+   */
+  onModuleInit(): void {
+    // Wire cost service for budget checking and cost tracking
+    this.unifiedAIService.setAICostService(this.aiCostService);
+  }
+}

@@ -1,39 +1,60 @@
-import { Test, TestingModule } from '@nestjs/testing';
+/**
+ * PDF Queue Service Tests
+ * Phase 10.185: Enhanced with Netflix-Grade Smart Retry Tests
+ *
+ * Uses lightweight mocking without NestJS TestingModule for faster execution.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PDFQueueService } from '../pdf-queue.service';
-import { PDFParsingService } from '../pdf-parsing.service';
-import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('PDFQueueService', () => {
   let service: PDFQueueService;
-  let pdfParsingService: PDFParsingService;
-  let eventEmitter: EventEmitter2;
+  let mockPdfParsingService: any;
+  let mockEventEmitter: any;
+  let mockPrisma: any;
 
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        PDFQueueService,
-        {
-          provide: PDFParsingService,
-          useValue: {
-            processFullText: jest.fn(),
-          },
-        },
-        {
-          provide: EventEmitter2,
-          useValue: {
-            emit: jest.fn(),
-          },
-        },
-      ],
-    }).compile();
+  beforeEach(() => {
+    vi.clearAllMocks();
 
-    service = module.get<PDFQueueService>(PDFQueueService);
-    pdfParsingService = module.get<PDFParsingService>(PDFParsingService);
-    eventEmitter = module.get<EventEmitter2>(EventEmitter2);
-  });
+    // Create mock services
+    mockPrisma = {
+      paper: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: 'paper-1',
+          doi: '10.1234/test',
+          pmid: null,
+          url: 'https://example.com/paper',
+          title: 'Test Paper',
+        }),
+        update: vi.fn().mockResolvedValue({}),
+      },
+    };
 
-  afterEach(() => {
-    jest.clearAllMocks();
+    mockPdfParsingService = {
+      processFullText: vi.fn(),
+      getRetryConfig: vi.fn().mockReturnValue({
+        maxAttempts: 3,
+        initialDelayMs: 1000,
+        maxDelayMs: 8000,
+        backoffMultiplier: 2,
+        jitterMs: 500,
+      }),
+    };
+
+    mockEventEmitter = {
+      emit: vi.fn(),
+    };
+
+    // Directly instantiate service with mocks
+    service = new PDFQueueService(
+      mockPdfParsingService,
+      mockEventEmitter,
+      mockPrisma,
+    );
+
+    // CRITICAL: Set processing to true to prevent automatic queue processing
+    // This allows us to control when processJob is called
+    (service as any).processing = true;
   });
 
   describe('addJob', () => {
@@ -42,7 +63,7 @@ describe('PDFQueueService', () => {
 
       expect(jobId).toBeDefined();
       expect(jobId).toContain('pdf-paper-1');
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'pdf.job.queued',
         expect.objectContaining({
           jobId,
@@ -53,11 +74,15 @@ describe('PDFQueueService', () => {
     });
 
     it('should start processing if not already running', async () => {
-      jest.spyOn(service as any, 'processQueue');
+      // Reset processing flag to test auto-start
+      (service as any).processing = false;
+      vi.spyOn(service as any, 'processQueue');
 
       await service.addJob('paper-1');
 
       expect((service as any).processQueue).toHaveBeenCalled();
+      // Reset back to prevent background processing
+      (service as any).processing = true;
     });
 
     it('should return different job IDs for same paper', async () => {
@@ -66,6 +91,24 @@ describe('PDFQueueService', () => {
       const jobId2 = await service.addJob('paper-1');
 
       expect(jobId1).not.toBe(jobId2);
+    });
+
+    it('should throw if paper not found', async () => {
+      mockPrisma.paper.findUnique.mockResolvedValueOnce(null);
+
+      await expect(service.addJob('nonexistent')).rejects.toThrow('Paper nonexistent not found in database');
+    });
+
+    it('should throw if paper has no valid identifiers', async () => {
+      mockPrisma.paper.findUnique.mockResolvedValueOnce({
+        id: 'paper-1',
+        doi: '',
+        pmid: '',
+        url: '',
+        title: 'Test Paper',
+      });
+
+      await expect(service.addJob('paper-1')).rejects.toThrow('Paper paper-1 has no valid identifiers');
     });
   });
 
@@ -125,13 +168,8 @@ describe('PDFQueueService', () => {
   });
 
   describe('processJob', () => {
-    beforeEach(() => {
-      // Stop automatic queue processing for these tests
-      (service as any).processing = false;
-    });
-
     it('should successfully process a job', async () => {
-      (pdfParsingService.processFullText as jest.Mock).mockResolvedValueOnce({
+      mockPdfParsingService.processFullText.mockResolvedValueOnce({
         success: true,
         status: 'success',
         wordCount: 5000,
@@ -144,7 +182,7 @@ describe('PDFQueueService', () => {
 
       expect(job?.status).toBe('completed');
       expect(job?.progress).toBe(100);
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'pdf.job.completed',
         expect.objectContaining({
           jobId,
@@ -154,11 +192,13 @@ describe('PDFQueueService', () => {
       );
     });
 
-    it('should retry on failure', async () => {
-      (pdfParsingService.processFullText as jest.Mock).mockResolvedValue({
+    it('should retry on retryable failure', async () => {
+      mockPdfParsingService.processFullText.mockResolvedValue({
         success: false,
         status: 'failed',
         error: 'Network error',
+        category: 'network',
+        retryable: true,
       });
 
       const jobId = await service.addJob('paper-1');
@@ -169,7 +209,7 @@ describe('PDFQueueService', () => {
 
       expect(job?.attempts).toBe(1);
       expect(job?.status).toBe('queued'); // Should be requeued
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'pdf.job.retry',
         expect.objectContaining({
           jobId,
@@ -179,11 +219,40 @@ describe('PDFQueueService', () => {
       );
     });
 
+    it('should not retry on non-retryable failure (paywall)', async () => {
+      mockPdfParsingService.processFullText.mockResolvedValue({
+        success: false,
+        status: 'failed',
+        error: 'Paper is behind paywall',
+        category: 'paywall',
+        retryable: false,
+      });
+
+      const jobId = await service.addJob('paper-1');
+      const job = service.getJob(jobId);
+
+      await (service as any).processJob(job);
+
+      expect(job?.attempts).toBe(1);
+      expect(job?.status).toBe('failed'); // Should NOT be requeued
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'pdf.job.failed',
+        expect.objectContaining({
+          jobId,
+          error: 'Paper is behind paywall',
+          category: 'paywall',
+          retryable: false,
+        }),
+      );
+    });
+
     it('should fail after max retries', async () => {
-      (pdfParsingService.processFullText as jest.Mock).mockResolvedValue({
+      mockPdfParsingService.processFullText.mockResolvedValue({
         success: false,
         status: 'failed',
         error: 'Network error',
+        category: 'network',
+        retryable: true,
       });
 
       const jobId = await service.addJob('paper-1');
@@ -199,7 +268,7 @@ describe('PDFQueueService', () => {
 
       expect(job?.attempts).toBe(3);
       expect(job?.status).toBe('failed');
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'pdf.job.failed',
         expect.objectContaining({
           jobId,
@@ -210,7 +279,7 @@ describe('PDFQueueService', () => {
     });
 
     it('should emit progress events', async () => {
-      (pdfParsingService.processFullText as jest.Mock).mockResolvedValueOnce({
+      mockPdfParsingService.processFullText.mockResolvedValueOnce({
         success: true,
         status: 'success',
         wordCount: 5000,
@@ -222,7 +291,7 @@ describe('PDFQueueService', () => {
       await (service as any).processJob(job);
 
       // Should emit multiple events
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'pdf.job.processing',
         expect.objectContaining({
           jobId,
@@ -230,7 +299,7 @@ describe('PDFQueueService', () => {
         }),
       );
 
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
         'pdf.job.progress',
         expect.objectContaining({
           jobId,

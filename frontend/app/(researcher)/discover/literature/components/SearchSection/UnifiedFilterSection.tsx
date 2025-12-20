@@ -40,6 +40,8 @@ import {
   Award,
   ChevronDown,
   ChevronUp,
+  FileText,
+  BookX,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -925,6 +927,51 @@ export const UnifiedFilterSection = memo(function UnifiedFilterSection({
                   <option value="date">Date (Newest)</option>
                 </select>
               </div>
+            </div>
+
+            {/* Phase 10.195: Advanced Research Filters */}
+            <div className="flex flex-wrap gap-4 pt-2">
+              {/* Full-Text Only Toggle */}
+              <button
+                type="button"
+                onClick={() => setFilters({ hasFullTextOnly: !filters.hasFullTextOnly })}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all',
+                  'focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1',
+                  filters.hasFullTextOnly
+                    ? 'border-green-300 bg-green-50 text-green-800'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                )}
+                role="checkbox"
+                aria-checked={filters.hasFullTextOnly}
+              >
+                <FileText className={cn('w-4 h-4', filters.hasFullTextOnly ? 'text-green-600' : 'text-gray-400')} />
+                <span className="text-sm font-medium">Full-Text Only</span>
+                {filters.hasFullTextOnly && (
+                  <Check className="w-4 h-4 text-green-600" />
+                )}
+              </button>
+
+              {/* Exclude Books Toggle */}
+              <button
+                type="button"
+                onClick={() => setFilters({ excludeBooks: !filters.excludeBooks })}
+                className={cn(
+                  'flex items-center gap-2 px-4 py-2.5 rounded-lg border transition-all',
+                  'focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-1',
+                  filters.excludeBooks
+                    ? 'border-orange-300 bg-orange-50 text-orange-800'
+                    : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                )}
+                role="checkbox"
+                aria-checked={filters.excludeBooks}
+              >
+                <BookX className={cn('w-4 h-4', filters.excludeBooks ? 'text-orange-600' : 'text-gray-400')} />
+                <span className="text-sm font-medium">Exclude Books</span>
+                {filters.excludeBooks && (
+                  <Check className="w-4 h-4 text-orange-600" />
+                )}
+              </button>
             </div>
 
             {/* Quality Info */}

@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { KnowledgeGraphService } from './knowledge-graph.service';
 
 /**
@@ -128,17 +127,12 @@ export interface TrendForecast {
 @Injectable()
 export class PredictiveGapService {
   private readonly logger = new Logger(PredictiveGapService.name);
-  private readonly openai: OpenAI;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
+    private readonly unifiedAIService: UnifiedAIService,
     _knowledgeGraphService: KnowledgeGraphService,
-  ) {
-    this.openai = new OpenAI({
-      apiKey: this.config.get('OPENAI_API_KEY'),
-    });
-  }
+  ) {}
 
   // ============================================================================
   // INNOVATION #1: RESEARCH OPPORTUNITY SCORING
@@ -277,24 +271,16 @@ Rate funding probability 0-1, where:
 
 Return JSON: { "probability": 0.X, "reasoning": "...", "suggestedGrants": ["NSF X", ...] }`;
 
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are a research funding expert analyzing grant potential.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for funding prediction
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.3,
-        max_tokens: 500,
-        response_format: { type: 'json_object' },
+        maxTokens: 500,
+        systemPrompt: 'You are a research funding expert analyzing grant potential.',
+        jsonMode: true,
       });
 
-      const result = JSON.parse(
-        response.choices[0].message.content || '{"probability": 0.5}',
-      );
+      const result = JSON.parse(response.content || '{"probability": 0.5}');
       return result.probability || 0.5;
     } catch (error) {
       this.logger.error('Funding prediction failed:', error);
@@ -366,23 +352,16 @@ Description: ${gap.description}
 
 Return JSON: { "expertiseAreas": ["Domain Expert in X", "Methodologist in Y", ...] }`;
 
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a research collaboration expert.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for collaboration suggestions
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'fast',
         temperature: 0.4,
-        max_tokens: 300,
-        response_format: { type: 'json_object' },
+        maxTokens: 300,
+        systemPrompt: 'You are a research collaboration expert.',
+        jsonMode: true,
       });
 
-      const result = JSON.parse(
-        response.choices[0].message.content || '{"expertiseAreas": []}',
-      );
+      const result = JSON.parse(response.content || '{"expertiseAreas": []}');
       const expertiseAreas = result.expertiseAreas || [];
 
       // Map expertise to potential collaborators

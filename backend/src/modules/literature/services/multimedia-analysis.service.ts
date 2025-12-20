@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@/common/prisma.service';
-import OpenAI from 'openai';
-import { ConfigService } from '@nestjs/config';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { UnifiedThemeExtractionService } from './unified-theme-extraction.service';
 
 export interface ExtractedTheme {
@@ -50,16 +49,12 @@ export interface ThemeSource {
 @Injectable()
 export class MultiMediaAnalysisService {
   private readonly logger = new Logger(MultiMediaAnalysisService.name);
-  private readonly openai: OpenAI;
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService,
+    private unifiedAIService: UnifiedAIService,
     private unifiedThemeService?: UnifiedThemeExtractionService,
-  ) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-    this.openai = new OpenAI({ apiKey });
-  }
+  ) {}
 
   /**
    * Extract research themes from video/podcast transcript (UNIFIED)
@@ -238,14 +233,14 @@ Respond in JSON format:
   ]
 }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
+    // Phase 10.195: Use UnifiedAIService for theme extraction
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      model: 'smart',
       temperature: 0.3,
+      jsonMode: true,
     });
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    const result = JSON.parse(response.content || '{}');
     const themes: ExtractedTheme[] = result.themes;
 
     // Map timestamps from transcript segments
@@ -260,17 +255,14 @@ Respond in JSON format:
     // Store themes in database
     await this.storeThemes(transcriptId, themes);
 
-    // Calculate cost
-    const cost = this.calculateGPT4Cost(
-      response.usage || { prompt_tokens: 0, completion_tokens: 0 },
-    );
+    // Phase 10.195: Cost is tracked by UnifiedAIService automatically
     await this.prisma.videoTranscript.update({
       where: { id: transcriptId },
-      data: { analysisCost: cost },
+      data: { analysisCost: response.cost ?? 0 },
     });
 
     this.logger.log(
-      `Extracted ${themes.length} themes (cost: $${cost.toFixed(4)})`,
+      `Extracted ${themes.length} themes (cost: $${(response.cost ?? 0).toFixed(4)})`,
     );
 
     return themes;
@@ -371,14 +363,14 @@ Respond in JSON format:
   ]
 }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
+    // Phase 10.195: Use UnifiedAIService for citation extraction
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      model: 'smart',
       temperature: 0.2,
+      jsonMode: true,
     });
 
-    const result = JSON.parse(response.choices[0].message.content || '{}');
+    const result = JSON.parse(response.content || '{}');
     const citations: ExtractedCitation[] = result.citations;
 
     // Store citations in database
@@ -399,17 +391,7 @@ Respond in JSON format:
     return citations;
   }
 
-  /**
-   * Calculate GPT-4 cost based on token usage
-   */
-  private calculateGPT4Cost(usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-  }): number {
-    const inputCost = (usage.prompt_tokens / 1000) * 0.01; // $0.01 per 1K input tokens
-    const outputCost = (usage.completion_tokens / 1000) * 0.03; // $0.03 per 1K output tokens
-    return inputCost + outputCost;
-  }
+  // Phase 10.195: Cost calculation now handled by UnifiedAIService
 
   /**
    * Get themes for a transcript

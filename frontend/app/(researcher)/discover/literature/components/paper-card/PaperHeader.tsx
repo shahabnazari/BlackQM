@@ -14,8 +14,8 @@
 
 'use client';
 
-import React from 'react';
-import { Check, Loader2 } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { Check, Loader2, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { MAX_DISPLAYED_AUTHORS } from './constants';
@@ -41,6 +41,10 @@ interface PaperHeaderProps {
   SourceIcon: React.ComponentType<{ className?: string }>;
   /** Handler for toggling selection (called by parent card) */
   onToggleSelection?: () => void;
+  /** Whether full-text is available */
+  hasFullText?: boolean;
+  /** Full-text fetch status */
+  fullTextStatus?: 'success' | 'fetching' | 'not_fetched' | 'failed' | 'available' | undefined;
 }
 
 // ============================================================================
@@ -56,6 +60,8 @@ export function PaperHeader({
   isExtracted,
   SourceIcon,
   onToggleSelection,
+  hasFullText = false,
+  fullTextStatus = undefined,
 }: PaperHeaderProps) {
   /**
    * Handle checkbox keyboard interaction
@@ -77,6 +83,16 @@ export function PaperHeader({
     e.stopPropagation();
     onToggleSelection?.();
   };
+
+  /**
+   * Phase 10.196: Memoized full-text availability check
+   * Optimized to prevent unnecessary re-renders and condition evaluation
+   * Matches PaperAccessBadges logic: hasFullText === true OR fullTextStatus === 'success'
+   * Also includes 'available' status (detected but not yet fetched)
+   */
+  const showFullTextIndicator = useMemo(() => {
+    return hasFullText === true || fullTextStatus === 'success' || fullTextStatus === 'available';
+  }, [hasFullText, fullTextStatus]);
 
   return (
     <div className="flex items-start gap-3">
@@ -106,11 +122,23 @@ export function PaperHeader({
       </div>
 
       <div className="flex-1">
-        {/* Title and Source */}
+        {/* Title, Full-Text Indicator, and Source */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-lg leading-tight flex-1 text-gray-900 dark:text-gray-100">
-            {title}
-          </h3>
+          <div className="flex items-start gap-2 flex-1 min-w-0">
+            <h3 className="font-semibold text-lg leading-tight flex-1 text-gray-900 dark:text-gray-100">
+              {title}
+            </h3>
+            {/* Phase 10.196: Full-Text Availability Indicator - Memoized for performance */}
+            {showFullTextIndicator && (
+              <div
+                className="flex items-center shrink-0 mt-0.5"
+                title="Full-text available for analysis and theme extraction"
+                aria-label="Full-text available"
+              >
+                <FileText className="w-5 h-5 text-green-600 dark:text-green-400" aria-hidden="true" />
+              </div>
+            )}
+          </div>
           {source && (
             <Badge
               variant="secondary"

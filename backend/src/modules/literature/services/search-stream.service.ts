@@ -48,7 +48,10 @@ import { SourceCapabilityService } from './source-capability.service';
 import { detectQueryComplexity } from '../constants/source-allocation.constants';
 // Phase 10.113 Week 11: Strict typing for semantic tier results
 import { PaperWithSemanticScore } from './progressive-semantic.service';
+// Phase 10.180: BM25 scoring for progressive semantic ranking
+import { compileQueryPatterns, calculateBM25RelevanceScore } from '../utils/relevance-scoring.util';
 // Phase 10.156: Simplified sort-based selection (iteration system removed)
+// NOTE (Phase 10.182): Abstract enrichment moved to full-text fetching stage (HtmlFullTextService)
 
 // ============================================================================
 // CONSTANTS
@@ -60,6 +63,55 @@ import { PaperWithSemanticScore } from './progressive-semantic.service';
  */
 const DOI_URL_PATTERN = /https?:\/\/doi\.org\//i;
 const NON_ALPHANUMERIC_PATTERN = /[^a-z0-9]/g;
+
+/**
+ * Phase 10.181: Document types to EXCLUDE from search results
+ * We only want peer-reviewed articles, not books, datasets, etc.
+ *
+ * CrossRef document types reference:
+ * https://api.crossref.org/types
+ *
+ * INCLUDED (not in this list):
+ * - journal-article ✅
+ * - proceedings-article ✅
+ * - posted-content (preprints) ✅
+ * - peer-review ✅
+ * - dissertation ✅
+ *
+ * EXCLUDED:
+ * - book ❌
+ * - book-chapter ❌
+ * - book-section ❌
+ * - book-part ❌
+ * - monograph ❌
+ * - edited-book ❌
+ * - reference-book ❌
+ * - reference-entry ❌
+ * - dataset ❌
+ * - standard ❌
+ * - report ❌ (often not peer-reviewed)
+ * - grant ❌
+ * - component ❌
+ */
+const EXCLUDED_DOCUMENT_TYPES = new Set([
+  'book',
+  'book-chapter',
+  'book-section',
+  'book-part',
+  'book-track',
+  'monograph',
+  'edited-book',
+  'reference-book',
+  'reference-entry',
+  'dataset',
+  'database',
+  'standard',
+  'grant',
+  'component',
+  // Lowercase variations for safety
+  'Book',
+  'Book Chapter',
+]);
 
 /**
  * Default expected response time for unknown sources (ms)
@@ -199,6 +251,7 @@ export class SearchStreamService {
     // Phase 10.115: Netflix-Grade Integration
     private readonly searchPipeline: SearchPipelineService,
     private readonly sourceCapability: SourceCapabilityService,
+    // NOTE (Phase 10.182): Abstract enrichment moved to HtmlFullTextService (post-search)
   ) {
     this.logger.log(
       '✅ [SearchStreamService] Phase 10.156 - Simplified Sort-Based Ranking',
@@ -301,6 +354,11 @@ export class SearchStreamService {
         clearInterval(heartbeatInterval);
         return searchId;
       }
+
+      // NOTE (Phase 10.182): Abstract enrichment moved to post-search full-text fetching stage
+      // Rationale: When papers are selected for theme extraction, full-text service visits
+      // publisher pages and can extract abstracts from same HTML/PDF (no redundant requests)
+      // See: HtmlFullTextService.fetchFullTextWithAbstract()
 
       // Stage 5: Final ranking (Netflix-grade semantic pipeline)
       await this.stageFinalRanking(state, options);
@@ -945,8 +1003,20 @@ export class SearchStreamService {
       `🚀 [Phase 10.113 Week 11] Starting progressive semantic ranking for ${papers.length} papers`,
     );
 
+    // Phase 10.180 FIX: Calculate BM25 scores BEFORE semantic ranking
+    // Without this, papers have no relevanceScore and Keywords shows 0 in UI
+    const compiledQuery = compileQueryPatterns(state.correctedQuery);
+    const papersWithBM25 = papers.map(paper => ({
+      ...paper,
+      relevanceScore: calculateBM25RelevanceScore(paper, compiledQuery),
+    }));
+
+    this.logger.log(
+      `✅ [Phase 10.180] BM25 scoring complete: ${papersWithBM25.length} papers scored`,
+    );
+
     // Use PaperWithSemanticScore for proper typing of combinedScore
-    let finalPapers: PaperWithSemanticScore[] = papers.map(p => ({
+    let finalPapers: PaperWithSemanticScore[] = papersWithBM25.map(p => ({
       ...p,
       semanticScore: p.relevanceScore ?? 0,
     }));
@@ -954,7 +1024,7 @@ export class SearchStreamService {
     try {
       // Stream progressive tier results
       for await (const tierResult of this.searchPipeline.streamProgressiveSemanticScores(
-        papers,
+        papersWithBM25, // Pass papers WITH BM25 scores
         state.correctedQuery,
         signal,
       )) {
@@ -1194,8 +1264,16 @@ export class SearchStreamService {
     source: LiteratureSource,
   ): Paper[] {
     const newPapers: Paper[] = [];
+    let excludedCount = 0;
 
     for (const paper of papers) {
+      // Phase 10.181: Filter out books, book chapters, datasets, and other non-article types
+      // This prevents books from Springer, CrossRef, etc. from appearing in results
+      if (this.isExcludedDocumentType(paper)) {
+        excludedCount++;
+        continue;
+      }
+
       // Generate consistent ID for deduplication
       const dedupId = this.generatePaperId(paper);
 
@@ -1212,7 +1290,63 @@ export class SearchStreamService {
       }
     }
 
+    // Log excluded items for transparency
+    if (excludedCount > 0) {
+      this.logger.debug(
+        `[${source}] Excluded ${excludedCount} non-article items (books, datasets, etc.)`,
+      );
+    }
+
     return newPapers;
+  }
+
+  /**
+   * Phase 10.181: Check if paper should be excluded based on document type
+   * Filters out books, book chapters, datasets, and other non-research-article content
+   *
+   * @param paper - Paper to check
+   * @returns true if paper should be EXCLUDED
+   */
+  private isExcludedDocumentType(paper: Paper): boolean {
+    // Check publicationType array (from CrossRef, PubMed, etc.)
+    if (paper.publicationType && paper.publicationType.length > 0) {
+      for (const docType of paper.publicationType) {
+        if (EXCLUDED_DOCUMENT_TYPES.has(docType)) {
+          return true;
+        }
+        // Also check lowercase version
+        if (EXCLUDED_DOCUMENT_TYPES.has(docType.toLowerCase())) {
+          return true;
+        }
+      }
+    }
+
+    // Additional heuristic: Check URL patterns for book content
+    // Springer books have specific URL patterns like /book/ or /chapter/
+    if (paper.url) {
+      const urlLower = paper.url.toLowerCase();
+      if (
+        urlLower.includes('/book/') ||
+        urlLower.includes('/chapter/') ||
+        urlLower.includes('/referencework/') ||
+        urlLower.includes('/encyclopedia/')
+      ) {
+        return true;
+      }
+    }
+
+    // Additional heuristic: Check venue/title for book indicators
+    const venue = paper.venue?.toLowerCase() || '';
+    if (
+      venue.includes('handbook of') ||
+      venue.includes('encyclopedia of') ||
+      venue.includes('encyclopedia ') ||
+      venue.includes(' handbook')
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   /**

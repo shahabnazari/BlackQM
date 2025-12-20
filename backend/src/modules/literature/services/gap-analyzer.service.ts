@@ -1,7 +1,40 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
-import { OpenAIService } from '../../ai/services/openai.service';
+// Phase 10.185: Migrated to UnifiedAIService for FREE Groq tier + fallback chain
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { ThemeExtractionService } from './theme-extraction.service';
+
+// =============================================================================
+// Phase 10.185: System Prompts for Gap Analysis
+// =============================================================================
+
+/**
+ * System prompt for research gap identification
+ * Helps AI identify meaningful gaps in research literature
+ */
+const GAP_IDENTIFICATION_SYSTEM_PROMPT = `You are an expert research analyst specializing in identifying gaps and opportunities in academic literature.
+Your task is to analyze research papers and identify meaningful gaps that could lead to valuable future research.
+
+Guidelines:
+- Focus on methodological, theoretical, and empirical gaps
+- Use specific terminology from the papers
+- Avoid generic placeholders like "X", "Y", or "Z"
+- Consider interdisciplinary opportunities
+- Return valid JSON arrays only`;
+
+/**
+ * System prompt for opportunity analysis
+ * Helps AI generate actionable research opportunities
+ */
+const OPPORTUNITY_ANALYSIS_SYSTEM_PROMPT = `You are an expert research strategist helping researchers identify and plan valuable research opportunities.
+Your task is to analyze research gaps and provide actionable insights for pursuing them.
+
+Guidelines:
+- Be specific and actionable
+- Consider practical constraints
+- Suggest realistic timelines
+- Identify collaboration opportunities
+- Consider funding landscape`;
 
 export interface ResearchGap {
   id: string;
@@ -66,7 +99,8 @@ export class GapAnalyzerService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly openAIService: OpenAIService,
+    // Phase 10.185: Use UnifiedAIService for FREE Groq tier + automatic fallback
+    private readonly unifiedAIService: UnifiedAIService,
     private readonly themeExtractionService: ThemeExtractionService,
   ) {}
 
@@ -399,10 +433,13 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
     `;
 
     try {
-      const response = await this.openAIService.generateCompletion(prompt, {
+      // Phase 10.185: Use UnifiedAIService with caching and system prompt
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'smart',
         temperature: 0.7,
         maxTokens: 1500,
+        cache: true,
+        systemPrompt: GAP_IDENTIFICATION_SYSTEM_PROMPT,
       });
 
       // Parse AI response
@@ -509,10 +546,13 @@ IMPORTANT: Use specific terminology from the papers. Do NOT use generic placehol
         7. Funding opportunities that might support this research
       `;
 
-      const response = await this.openAIService.generateCompletion(prompt, {
+      // Phase 10.185: Use UnifiedAIService with caching and system prompt
+      const response = await this.unifiedAIService.generateCompletion(prompt, {
         model: 'smart',
         temperature: 0.6,
         maxTokens: 800,
+        cache: true,
+        systemPrompt: OPPORTUNITY_ANALYSIS_SYSTEM_PROMPT,
       });
 
       analysis = this.parseOpportunityAnalysis(response.content);

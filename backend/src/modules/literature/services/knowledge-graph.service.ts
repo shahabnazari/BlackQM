@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 
 /**
  * Phase 9 Day 14-15: Revolutionary Knowledge Graph Construction Service
@@ -168,16 +167,11 @@ export interface EmergingTopic {
 @Injectable()
 export class KnowledgeGraphService {
   private readonly logger = new Logger(KnowledgeGraphService.name);
-  private readonly openai: OpenAI;
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
-  ) {
-    this.openai = new OpenAI({
-      apiKey: this.config.get('OPENAI_API_KEY'),
-    });
-  }
+    private readonly unifiedAIService: UnifiedAIService,
+  ) {}
 
   // ============================================================================
   // CORE GRAPH CONSTRUCTION
@@ -228,24 +222,16 @@ For each entity, provide:
 
 Return as JSON array: [{ type, label, description, keywords: [] }]`;
 
-        const response = await this.openai.chat.completions.create({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are an expert research analyst extracting structured knowledge from academic papers.',
-            },
-            { role: 'user', content: prompt },
-          ],
+        // Phase 10.195: Use UnifiedAIService for entity extraction
+        const response = await this.unifiedAIService.generateCompletion(prompt, {
+          model: 'smart',
           temperature: 0.3,
-          max_tokens: 1500,
-          response_format: { type: 'json_object' },
+          maxTokens: 1500,
+          systemPrompt: 'You are an expert research analyst extracting structured knowledge from academic papers.',
+          jsonMode: true,
         });
 
-        const extractedData = JSON.parse(
-          response.choices[0].message.content || '{"entities": []}',
-        );
+        const extractedData = JSON.parse(response.content || '{"entities": []}');
         const entities = extractedData.entities || [];
 
         // Create knowledge nodes

@@ -80,6 +80,8 @@ import { ConfigService } from '@nestjs/config';
 import { firstValueFrom } from 'rxjs';
 // Phase 10.106 Phase 3: Retry Service Integration - Enterprise-grade resilience
 import { RetryService } from '../../../common/services/retry.service';
+// Phase 10.195: Netflix-Grade Quota Monitoring - Prevents 429 errors
+import { APIQuotaMonitorService } from './api-quota-monitor.service';
 import { LiteratureSource, Paper } from '../dto/literature.dto';
 import { calculateQualityScore } from '../utils/paper-quality.util';
 import {
@@ -145,10 +147,12 @@ export class CoreService {
   private readonly apiKey: string;
 
   // Phase 10.106 Phase 3: Inject RetryService for enterprise-grade resilience
+  // Phase 10.195: Inject APIQuotaMonitorService for rate limiting
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
     private readonly retry: RetryService,
+    private readonly quotaMonitor: APIQuotaMonitorService,
   ) {
     // Phase 10.7.10: CORE API key from environment (10 req/sec)
     this.apiKey = this.configService.get<string>('CORE_API_KEY') || '';
@@ -257,6 +261,7 @@ export class CoreService {
 
   /**
    * Phase 10.159: Fetch a single page from CORE API
+   * Phase 10.195: Added quota monitoring to prevent 429 errors
    */
   private async searchSinglePage(
     query: string,
@@ -265,6 +270,16 @@ export class CoreService {
     options?: CoreSearchOptions,
   ): Promise<Paper[]> {
     try {
+      // Phase 10.195: Check and wait for quota before making request
+      // This prevents 429 errors by respecting rate limits
+      // NOTE: Using waitForQuota instead of acquireQuotaSlot to avoid double-recording
+      // when called via source-router (which records separately)
+      const quotaAvailable = await this.quotaMonitor.waitForQuota('core', 10000);
+      if (!quotaAvailable) {
+        this.logger.warn('[CORE] Quota exhausted, skipping request');
+        return [];
+      }
+
       // Construct typed query parameters
       const params: CoreSearchParams = {
         q: query,

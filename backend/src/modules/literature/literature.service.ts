@@ -1003,6 +1003,56 @@ export class LiteratureService implements OnModuleInit {
           });
         }
 
+        // Phase 10.195: Advanced Research Filters (OPTIMIZED - single pass)
+        // Combines hasFullTextOnly and excludeBooks into one iteration for O(n) performance
+        const applyFullTextFilter = searchDto.hasFullTextOnly === true;
+        const applyExcludeBooksFilter = searchDto.excludeBooks === true;
+
+        if (applyFullTextFilter || applyExcludeBooksFilter) {
+          const beforeAdvancedFilters = filteredPapers.length;
+          let removedNoFullText = 0;
+          let removedBooks = 0;
+
+          // Pre-compile regex for book detection (faster than multiple includes)
+          const bookPattern = applyExcludeBooksFilter
+            ? /\b(book|chapter|handbook|encyclopedia|monograph|textbook|edited volume|chapter in:)\b/i
+            : null;
+
+          filteredPapers = filteredPapers.filter((paper) => {
+            // Full-text filter (fast boolean check)
+            if (applyFullTextFilter && paper.hasFullText !== true) {
+              removedNoFullText++;
+              return false;
+            }
+
+            // Exclude books filter (regex-based, case-insensitive)
+            if (bookPattern) {
+              const searchText = `${paper.venue || ''} ${paper.title || ''}`;
+              if (bookPattern.test(searchText)) {
+                removedBooks++;
+                return false;
+              }
+            }
+
+            return true;
+          });
+
+          // Log filter results
+          if (applyFullTextFilter) {
+            this.logger.log(
+              `📄 [Phase 10.195] Full-text filter: removed ${removedNoFullText} papers without full-text`,
+            );
+          }
+          if (applyExcludeBooksFilter) {
+            this.logger.log(
+              `📚 [Phase 10.195] Exclude books filter: removed ${removedBooks} books/chapters`,
+            );
+          }
+          this.logger.log(
+            `✅ [Phase 10.195] Advanced filters: ${beforeAdvancedFilters} → ${filteredPapers.length} papers`,
+          );
+        }
+
         // Phase 10.7 Day 5.6: Comprehensive filtering summary
         const filteringSummary = {
           initial: papersWithUpdatedQuality.length,

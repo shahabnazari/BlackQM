@@ -145,6 +145,17 @@ export interface SearchLiteratureParams {
    * Full-text boost multiplier for quality scoring (0.0-1.0)
    */
   fullTextBoost?: number;
+  // ==========================================================================
+  // Phase 10.195: Advanced Research Filters
+  // ==========================================================================
+  /**
+   * Only return papers with full-text available
+   */
+  hasFullTextOnly?: boolean;
+  /**
+   * Exclude books and book chapters from results
+   */
+  excludeBooks?: boolean;
 }
 
 export interface KnowledgeGraphData {
@@ -629,6 +640,7 @@ class LiteratureAPIService {
       }
 
       // Extract only the fields allowed by SavePaperDto
+      // Phase 10.184: Added pdfUrl, hasFullText, fullTextStatus from Stage 9 full-text detection
       const saveData = {
         title: paper.title.trim(),
         authors: authorsArray,
@@ -640,6 +652,11 @@ class LiteratureAPIService {
         citationCount: typeof paper.citationCount === 'number' ? paper.citationCount : undefined,
         tags: paper.tags,
         collectionId: paper.collectionId,
+        // Phase 10.184: Full-text detection fields from Stage 9
+        // These enable backend to use fastest PDF fetch tier (direct URL)
+        pdfUrl: paper.pdfUrl ?? undefined,
+        hasFullText: paper.hasFullText ?? undefined,
+        fullTextStatus: paper.fullTextStatus ?? undefined,
       };
 
       // Phase 10 Day 32: CRITICAL FIX - Use authenticated endpoint to enable full-text extraction

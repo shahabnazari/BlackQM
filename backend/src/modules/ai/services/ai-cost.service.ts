@@ -31,18 +31,32 @@ export interface UsageDetails {
 export class AICostService {
   private readonly logger = new Logger(AICostService.name);
   
+  // Phase 10.185: Support all AI providers (Groq, Gemini, OpenAI)
   private readonly costPerToken = {
-    'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
-    'gpt-3.5-turbo-0125': { input: 0.0005, output: 0.0015 },
-    'gpt-3.5-turbo-16k': { input: 0.001, output: 0.002 },
-    'gpt-4': { input: 0.03, output: 0.06 },
-    'gpt-4-turbo': { input: 0.01, output: 0.03 },
-    'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
-    'gpt-4-vision-preview': { input: 0.01, output: 0.03 },
+    // Groq (FREE)
+    'llama-3.3-70b-versatile': { input: 0, output: 0 },
+    'groq': { input: 0, output: 0 },
+    // Gemini
+    'gemini-1.5-flash': { input: 0.075 / 1_000_000, output: 0.30 / 1_000_000 }, // Per token (converted from per 1M)
+    'gemini-1.5-pro': { input: 0.125 / 1_000_000, output: 0.50 / 1_000_000 },
+    'gemini': { input: 0.075 / 1_000_000, output: 0.30 / 1_000_000 },
+    // OpenAI
+    'gpt-3.5-turbo': { input: 0.0005 / 1000, output: 0.0015 / 1000 }, // Per token (converted from per 1K)
+    'gpt-3.5-turbo-0125': { input: 0.0005 / 1000, output: 0.0015 / 1000 },
+    'gpt-3.5-turbo-16k': { input: 0.001 / 1000, output: 0.002 / 1000 },
+    'gpt-4': { input: 0.03 / 1000, output: 0.06 / 1000 },
+    'gpt-4-turbo': { input: 0.01 / 1000, output: 0.03 / 1000 },
+    'gpt-4-turbo-preview': { input: 0.01 / 1000, output: 0.03 / 1000 },
+    'gpt-4-vision-preview': { input: 0.01 / 1000, output: 0.03 / 1000 },
   };
 
   constructor(private prisma: PrismaService) {}
 
+  /**
+   * Phase 10.185: Track AI usage and persist to database
+   * Note: Budget checking should be done BEFORE calling this (fail fast)
+   * This method only tracks usage, UnifiedAIService handles pre-check
+   */
   async trackUsage(
     userId: string,
     model: string,
@@ -65,19 +79,69 @@ export class AICostService {
       },
     });
 
-    // Check budget limits
-    await this.checkBudgetLimit(userId);
+    // Phase 10.185: Budget check AFTER tracking (defensive check)
+    // Note: UnifiedAIService.checkBudget() does pre-check BEFORE request
+    // This is a safety net in case budget was exceeded during request
+    try {
+      await this.checkBudgetLimit(userId);
+    } catch (error) {
+      // Log but don't fail - usage already tracked
+      this.logger.warn(
+        `Budget limit exceeded after usage tracked for user ${userId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
 
     return cost;
   }
 
+  /**
+   * Phase 10.185: Calculate cost for any provider (Groq, Gemini, OpenAI)
+   * Supports per-token pricing (already converted from per-1M/per-1K rates)
+   * Handles edge cases: null/empty model names, unknown models
+   */
   private calculateCost(
     model: string,
     inputTokens: number,
     outputTokens: number
   ): number {
-    const rates = this.costPerToken[model as keyof typeof this.costPerToken] || this.costPerToken['gpt-3.5-turbo'];
-    return (inputTokens * rates.input + outputTokens * rates.output) / 1000;
+    // Phase 10.185: Handle edge cases
+    if (!model || typeof model !== 'string' || model.trim().length === 0) {
+      // Unknown model - default to GPT-3.5 rates (conservative estimate)
+      const rates = this.costPerToken['gpt-3.5-turbo'];
+      return inputTokens * rates.input + outputTokens * rates.output;
+    }
+
+    const modelLower = model.toLowerCase().trim();
+    
+    // Try exact match first (case-insensitive)
+    let rates = this.costPerToken[modelLower as keyof typeof this.costPerToken];
+    
+    // Try normalized match (remove provider prefixes)
+    if (!rates) {
+      const normalizedModel = modelLower.replace(/^(groq|gemini|openai)[-_]?/i, '');
+      rates = this.costPerToken[normalizedModel as keyof typeof this.costPerToken];
+    }
+    
+    // Try provider-specific fallback (substring match)
+    if (!rates) {
+      if (modelLower.includes('groq') || modelLower.includes('llama')) {
+        rates = this.costPerToken['groq'];
+      } else if (modelLower.includes('gemini')) {
+        rates = this.costPerToken['gemini'];
+      } else {
+        // Default to GPT-3.5 rates for unknown models (conservative)
+        rates = this.costPerToken['gpt-3.5-turbo'];
+      }
+    }
+    
+    // Phase 10.185: Validate rates exist (defensive programming)
+    if (!rates) {
+      this.logger.warn(`Unknown model "${model}" - using GPT-3.5 rates as fallback`);
+      rates = this.costPerToken['gpt-3.5-turbo'];
+    }
+    
+    // Rates are already per-token, so multiply directly
+    return inputTokens * rates.input + outputTokens * rates.output;
   }
 
   async checkBudgetLimit(userId: string): Promise<void> {

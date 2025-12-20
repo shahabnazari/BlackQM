@@ -107,6 +107,7 @@ export type DetectionMethod =
   | 'direct_url'
   | 'pmc_pattern'
   | 'unpaywall_api'
+  | 'core_api'      // Phase 10.195: CORE API (250M+ OA papers)
   | 'doi_resolution'
   | 'html_scraping'
   | 'pdf_link_scan'
@@ -120,6 +121,7 @@ export const DETECTION_METHODS: readonly DetectionMethod[] = [
   'direct_url',
   'pmc_pattern',
   'unpaywall_api',
+  'core_api',
   'doi_resolution',
   'html_scraping',
   'pdf_link_scan',
@@ -199,6 +201,11 @@ export interface FullTextDetectionResult {
   readonly isAvailable: boolean;
   /** Confidence level of detection */
   readonly confidence: DetectionConfidence;
+  /**
+   * Numeric confidence score (0-1) for finer-grained decisions
+   * Phase 10.195: Added to enable pipeline to accept high-score low-confidence results
+   */
+  readonly confidenceScore?: number;
   /** Sources where full-text was found (may be multiple) */
   readonly sources: readonly FullTextSource[];
   /** Primary URL for full-text (null if not available) */
@@ -648,6 +655,14 @@ export const DETECTION_TIERS: readonly DetectionTierConfig[] = [
     timeoutMs: 1000,
     costFactor: 0.1,
     reliabilityFactor: 0.98,
+  },
+  {
+    tier: 3.5,
+    name: 'CORE API',
+    description: 'Query CORE API (250M+ open access papers)',
+    timeoutMs: 3000,
+    costFactor: 0.15,
+    reliabilityFactor: 0.85,
   },
   {
     tier: 4,

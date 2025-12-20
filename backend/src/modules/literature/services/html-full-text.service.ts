@@ -1,8 +1,9 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { JSDOM } from 'jsdom';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { PrismaService } from '../../../common/prisma.service';
 import { COMPLEX_API_TIMEOUT, ENRICHMENT_TIMEOUT } from '../constants/http-config.constants';
+import { AdaptiveTimeoutService } from './adaptive-timeout.service';
 
 /**
  * Phase 10 Day 30: HTML Full-Text Extraction Service
@@ -26,6 +27,9 @@ interface HtmlFetchResult {
   wordCount?: number;
   source?: 'pmc' | 'html_scrape';
   error?: string;
+  // Phase 10.182: Also extract abstract when visiting publisher pages
+  abstract?: string;
+  abstractWordCount?: number;
 }
 
 /**
@@ -86,6 +90,20 @@ export class HtmlFullTextService {
   };
 
   /**
+   * Phase 10.182: Publisher-Specific Abstract CSS Selectors
+   * Extract abstract when visiting publisher pages (alongside full-text)
+   */
+  private readonly ABSTRACT_SELECTORS: Record<string, string[]> = {
+    mdpi: ['.html-abstract', '.art-abstract', '[class*="abstract"]'],
+    plos: ['.abstract-content', '#abstract', '[class*="abstract"]'],
+    frontiers: ['.JournalAbstract', '.abstract-content', '[class*="abstract"]'],
+    springerNature: ['#Abs1-content', '#abstract-content', '.c-article-section__content', '[data-test="abstract-content"]'],
+    scienceDirect: ['#abstracts .abstract', '.abstract', '[class*="abstract"]'],
+    jama: ['.abstract', '#abstract', '.article-abstract'],
+    generic: ['[class*="abstract"]', '#abstract', '.abstract', '[data-abstract]'],
+  };
+
+  /**
    * Non-Content Selectors to Exclude (Nov 18, 2025)
    * Elements that should be removed before text extraction
    */
@@ -104,7 +122,63 @@ export class HtmlFullTextService {
     '[id*="ad"]',
   ];
 
-  constructor(_prisma: PrismaService) {}
+  // Phase 10.185: Netflix-grade adaptive timeout service
+  private readonly adaptiveTimeout?: AdaptiveTimeoutService;
+
+  constructor(
+    _prisma: PrismaService,
+    @Optional() adaptiveTimeout?: AdaptiveTimeoutService,
+  ) {
+    this.adaptiveTimeout = adaptiveTimeout;
+  }
+
+  /**
+   * Phase 10.185: Get adaptive timeout for operation
+   * Falls back to default if service not available
+   */
+  private getAdaptiveTimeout(operation: string, defaultMs: number): number {
+    if (!this.adaptiveTimeout) return defaultMs;
+    return this.adaptiveTimeout.getTimeout(operation) || defaultMs;
+  }
+
+  /**
+   * Phase 10.185: Record latency for adaptive timeout learning
+   */
+  private recordLatency(operation: string, durationMs: number, success: boolean): void {
+    if (this.adaptiveTimeout) {
+      this.adaptiveTimeout.recordLatency(operation, durationMs, success);
+    }
+  }
+
+  /**
+   * Phase 10.185: Check if error is non-retryable (skip retries to save resources)
+   * - 402 Payment Required (paywall)
+   * - 403 Forbidden (access denied)
+   * - 404 Not Found
+   * - 410 Gone
+   */
+  private isNonRetryableError(error: unknown): boolean {
+    if (axios.isAxiosError(error)) {
+      const status = (error as AxiosError).response?.status;
+      return status === 402 || status === 403 || status === 404 || status === 410;
+    }
+    return false;
+  }
+
+  /**
+   * Phase 10.185: Get error category for metrics
+   */
+  private categorizeError(error: unknown): 'paywall' | 'not_found' | 'timeout' | 'network' | 'unknown' {
+    if (axios.isAxiosError(error)) {
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status;
+      if (status === 402 || status === 403) return 'paywall';
+      if (status === 404 || status === 410) return 'not_found';
+      if (axiosError.code === 'ECONNABORTED') return 'timeout';
+      if (axiosError.code === 'ENOTFOUND' || axiosError.code === 'ECONNREFUSED') return 'network';
+    }
+    return 'unknown';
+  }
 
   /**
    * Waterfall Strategy: Try multiple sources in priority order
@@ -191,13 +265,20 @@ export class HtmlFullTextService {
         email: this.NCBI_EMAIL,
       };
 
+      // Phase 10.185: Adaptive timeout + latency tracking
+      const timeout = this.getAdaptiveTimeout('pmc_fetch', COMPLEX_API_TIMEOUT);
+      const startTime = Date.now();
+
       const response = await axios.get(fetchUrl, {
         params,
-        timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
+        timeout,
         headers: {
           'User-Agent': this.USER_AGENT,
         },
       });
+
+      // Record successful latency for adaptive learning
+      this.recordLatency('pmc_fetch', Date.now() - startTime, true);
 
       const xmlContent = response.data;
 
@@ -213,22 +294,37 @@ export class HtmlFullTextService {
 
       const wordCount = this.calculateWordCount(fullText);
 
-      this.logger.log(
-        `✅ PMC extraction successful: ${wordCount} words from ${pmcid}`,
-      );
+      // Phase 10.183: Also extract abstract from PMC XML (Loophole #2 fix)
+      const abstract = this.extractAbstractFromPmcXml(xmlContent);
+      const abstractWordCount = abstract ? this.calculateWordCount(abstract) : undefined;
+
+      if (abstract) {
+        this.logger.log(
+          `✅ PMC extraction successful: ${wordCount} words + ${abstractWordCount} word abstract from ${pmcid}`,
+        );
+      } else {
+        this.logger.log(
+          `✅ PMC extraction successful: ${wordCount} words from ${pmcid} (no abstract in XML)`,
+        );
+      }
 
       return {
         success: true,
         text: fullText,
         wordCount,
         source: 'pmc',
+        abstract,
+        abstractWordCount,
       };
     } catch (error) {
+      // Phase 10.185: Record failed latency + categorize error
+      // Note: startTime may not exist if error occurred before assignment
+      const errorCategory = this.categorizeError(error);
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logger.error(`PMC fetch error for PMID ${pmid}: ${errorMsg}`);
+      this.logger.error(`PMC fetch error for PMID ${pmid} [${errorCategory}]: ${errorMsg}`);
       return {
         success: false,
-        error: `PMC API error: ${errorMsg}`,
+        error: `PMC API error (${errorCategory}): ${errorMsg}`,
       };
     }
   }
@@ -271,6 +367,94 @@ export class HtmlFullTextService {
       );
       return null;
     }
+  }
+
+  /**
+   * Phase 10.183: Extract abstract from PMC XML structure
+   *
+   * PMC XML Structure:
+   * <article>
+   *   <front>
+   *     <article-meta>
+   *       <abstract><p>Abstract text...</p></abstract>
+   *     </article-meta>
+   *   </front>
+   *   <body>...</body>
+   * </article>
+   *
+   * @param xmlContent - Raw PMC XML content
+   * @returns Extracted abstract text or undefined
+   */
+  private extractAbstractFromPmcXml(xmlContent: string): string | undefined {
+    try {
+      // Try multiple abstract patterns (structured vs simple)
+      const abstractPatterns = [
+        /<abstract[^>]*>([\s\S]*?)<\/abstract>/i,
+        /<abstract-group[^>]*>([\s\S]*?)<\/abstract-group>/i,
+      ];
+
+      let abstractContent: string | null = null;
+
+      for (const pattern of abstractPatterns) {
+        const match = xmlContent.match(pattern);
+        if (match) {
+          abstractContent = match[1];
+          break;
+        }
+      }
+
+      if (!abstractContent) {
+        return undefined;
+      }
+
+      // Handle structured abstracts with sections (BACKGROUND, METHODS, RESULTS, etc.)
+      const sectionPattern = /<sec[^>]*>[\s\S]*?<title[^>]*>([\s\S]*?)<\/title>[\s\S]*?<p[^>]*>([\s\S]*?)<\/p>[\s\S]*?<\/sec>/gi;
+      const sections: string[] = [];
+      let sectionMatch;
+
+      while ((sectionMatch = sectionPattern.exec(abstractContent)) !== null) {
+        const sectionTitle = sectionMatch[1].replace(/<[^>]+>/g, '').trim().toUpperCase();
+        const sectionText = sectionMatch[2].replace(/<[^>]+>/g, ' ').trim();
+        if (sectionTitle && sectionText) {
+          sections.push(`${sectionTitle}: ${sectionText}`);
+        }
+      }
+
+      // If structured abstract found, use it
+      if (sections.length > 0) {
+        const structured = sections.join(' ');
+        const cleaned = this.cleanAbstractText(structured);
+        if (cleaned.length >= 100) {
+          this.logger.log(`✅ PMC structured abstract extracted: ${sections.length} sections`);
+          return cleaned;
+        }
+      }
+
+      // Fallback: Extract all paragraphs from abstract
+      abstractContent = abstractContent.replace(/<p[^>]*>([\s\S]*?)<\/p>/gi, '$1\n\n');
+
+      // Remove all XML tags
+      abstractContent = abstractContent.replace(/<[^>]+>/g, ' ');
+
+      // Decode XML entities and clean
+      abstractContent = this.decodeXmlEntities(abstractContent);
+      const cleaned = this.cleanAbstractText(abstractContent);
+
+      return cleaned.length >= 100 ? cleaned : undefined;
+    } catch (error) {
+      this.logger.warn(`Failed to extract abstract from PMC XML: ${error instanceof Error ? error.message : String(error)}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * Clean abstract text - normalize whitespace, remove extra formatting
+   */
+  private cleanAbstractText(text: string): string {
+    return text
+      .replace(/\s+/g, ' ')
+      .replace(/\n+/g, ' ')
+      .trim();
   }
 
   /**
@@ -350,11 +534,20 @@ export class HtmlFullTextService {
    * - Filter out navigation, ads, sidebars
    */
   private async scrapeHtmlFromUrl(url: string): Promise<HtmlFetchResult> {
+    // Phase 10.185: Get publisher for per-publisher tracking
+    const hostname = new URL(url).hostname.toLowerCase();
+    const publisherKey = this.getPublisherKey(hostname);
+    const operationKey = `html_scrape_${publisherKey}`;
+    const startTime = Date.now();
+
     try {
       this.logger.log(`🌐 Fetching HTML from: ${url}`);
 
+      // Phase 10.185: Adaptive timeout per publisher
+      const timeout = this.getAdaptiveTimeout(operationKey, COMPLEX_API_TIMEOUT);
+
       const response = await axios.get(url, {
-        timeout: COMPLEX_API_TIMEOUT, // 15s - Phase 10.6 Day 14.5: Migrated to centralized config
+        timeout,
         headers: {
           'User-Agent': this.USER_AGENT,
           Accept:
@@ -364,12 +557,14 @@ export class HtmlFullTextService {
         maxRedirects: 5,
       });
 
+      // Phase 10.185: Record successful latency
+      this.recordLatency(operationKey, Date.now() - startTime, true);
+
       const html = response.data;
       const dom = new JSDOM(html);
       const document = dom.window.document;
 
-      // Detect publisher and use specific extraction strategy
-      const hostname = new URL(url).hostname.toLowerCase();
+      // Use publisher-specific extraction strategy (hostname already extracted above)
       let extractedText = '';
 
       if (hostname.includes('plos.org')) {
@@ -403,20 +598,90 @@ export class HtmlFullTextService {
 
       const wordCount = this.calculateWordCount(extractedText);
 
+      // Phase 10.182: Also extract abstract from the same page (publisherKey already extracted above)
+      const abstract = this.extractAbstract(document, publisherKey);
+      const abstractWordCount = abstract ? this.calculateWordCount(abstract) : undefined;
+
+      if (abstract) {
+        this.logger.log(
+          `✅ Abstract also extracted: ${abstractWordCount} words (${publisherKey})`,
+        );
+      }
+
       return {
         success: true,
         text: extractedText,
         wordCount,
         source: 'html_scrape',
+        abstract,
+        abstractWordCount,
       };
     } catch (error) {
+      // Phase 10.185: Record failed latency + categorize error + smart retry check
+      this.recordLatency(operationKey, Date.now() - startTime, false);
+      const errorCategory = this.categorizeError(error);
+      const isNonRetryable = this.isNonRetryableError(error);
       const errorMsg = error instanceof Error ? error.message : String(error);
-      this.logger.error(`HTML scraping error for ${url}: ${errorMsg}`);
+
+      this.logger.error(
+        `HTML scraping error for ${url} [${errorCategory}${isNonRetryable ? ', non-retryable' : ''}]: ${errorMsg}`,
+      );
+
       return {
         success: false,
-        error: `HTML scraping failed: ${errorMsg}`,
+        error: `HTML scraping failed (${errorCategory}): ${errorMsg}`,
       };
     }
+  }
+
+  /**
+   * Phase 10.182: Get publisher key from hostname
+   */
+  private getPublisherKey(hostname: string): string {
+    if (hostname.includes('plos.org')) return 'plos';
+    if (hostname.includes('mdpi.com')) return 'mdpi';
+    if (hostname.includes('frontiersin.org')) return 'frontiers';
+    if (hostname.includes('nature.com') || hostname.includes('springer.com')) return 'springerNature';
+    if (hostname.includes('sciencedirect.com') || hostname.includes('cell.com')) return 'scienceDirect';
+    if (hostname.includes('jamanetwork.com')) return 'jama';
+    return 'generic';
+  }
+
+  /**
+   * Phase 10.182: Extract abstract from publisher page
+   * Uses publisher-specific CSS selectors
+   */
+  private extractAbstract(document: Document, publisherKey: string): string | undefined {
+    const selectors = [
+      ...(this.ABSTRACT_SELECTORS[publisherKey] || []),
+      ...this.ABSTRACT_SELECTORS.generic,
+    ];
+
+    for (const selector of selectors) {
+      try {
+        const element = document.querySelector(selector);
+        if (element) {
+          let text = element.textContent || '';
+
+          // Clean the abstract text
+          text = text
+            .replace(/^abstract\s*:?\s*/i, '') // Remove "Abstract:" prefix
+            .replace(/\s+/g, ' ')
+            .replace(/\n+/g, ' ')
+            .trim();
+
+          // Minimum 100 chars for valid abstract
+          if (text.length >= 100) {
+            this.logger.debug(`✅ Abstract found with selector: "${selector}"`);
+            return text;
+          }
+        }
+      } catch {
+        // Continue to next selector
+      }
+    }
+
+    return undefined;
   }
 
   /**

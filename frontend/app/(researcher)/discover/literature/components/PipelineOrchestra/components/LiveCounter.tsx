@@ -375,15 +375,15 @@ const QualityTooltipContent = memo(function QualityTooltipContent() {
   return (
     <div className="bg-gray-900/98 border border-white/20 rounded-lg shadow-xl p-3 backdrop-blur-xl pointer-events-auto">
       <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-gray-900 border-l border-b border-white/20 transform rotate-45"></div>
-      
+
       <h4 className="text-xs font-semibold text-white mb-1.5">
-        Search Progress Quality Score
+        Search Completeness Score
       </h4>
-      
+
       <p className="text-xs text-white/80 leading-relaxed mb-2">
-        This score indicates how complete and thorough the search process is, not the quality of individual papers.
+        This score shows how much of the search pipeline has completed. It does NOT measure paper quality.
       </p>
-      
+
       <div className="space-y-1.5 text-xs">
         <div className="flex items-start gap-2">
           <span className="text-white/60 font-mono shrink-0">30pts</span>
@@ -391,16 +391,16 @@ const QualityTooltipContent = memo(function QualityTooltipContent() {
         </div>
         <div className="flex items-start gap-2">
           <span className="text-white/60 font-mono shrink-0">30pts</span>
-          <span className="text-white/70">Papers discovered (up to 200)</span>
+          <span className="text-white/70">Papers discovered (up to target)</span>
         </div>
         <div className="flex items-start gap-2">
           <span className="text-white/60 font-mono shrink-0">40pts</span>
-          <span className="text-white/70">Semantic analysis progress</span>
+          <span className="text-white/70">Ranking & selection progress</span>
         </div>
       </div>
-      
+
       <p className="text-xs text-white/60 mt-2 pt-2 border-t border-white/10">
-        100% = All sources complete, papers found, full semantic analysis done
+        100% = Pipeline complete. See Quality Filter for paper quality.
       </p>
     </div>
   );
@@ -424,16 +424,17 @@ export const QualityMeter = memo<{
 
   const displayScore = useTransform(springScore, (v) => Math.round(v));
 
-  // Memoize quality level and color calculations
+  // Memoize completeness level and color calculations
+  // Phase 10.202: Renamed from "quality" to "completeness" to avoid confusion with paper quality
   const { qualityLevel, qualityColor } = useMemo(() => {
-    const level = score >= 80 ? 'Excellent' :
-      score >= 60 ? 'Good' :
-      score >= 40 ? 'Fair' : 'Building...';
-    
+    const level = score >= 80 ? 'Complete' :
+      score >= 60 ? 'Almost' :
+      score >= 40 ? 'Running' : 'Starting';
+
     const color = score >= 80 ? 'text-green-400' :
       score >= 60 ? 'text-blue-400' :
       score >= 40 ? 'text-yellow-400' : 'text-white/50';
-    
+
     return { qualityLevel: level, qualityColor: color };
   }, [score]);
 
@@ -485,13 +486,13 @@ export const QualityMeter = memo<{
         </div>
       </div>
 
-      {/* Label - Phase 10.134: Increased font sizes for readability */}
+      {/* Label - Phase 10.202: Clear distinction from paper quality */}
       <div className="flex flex-col">
         <span className={cn('text-xs font-medium', qualityColor)}>
           {qualityLevel}
         </span>
-        <span className="text-xs text-white/50 uppercase tracking-wider"> {/* Phase 10.135: Increased from 10px to 12px */}
-          Search Progress
+        <span className="text-[10px] text-white/50 uppercase tracking-wider">
+          Pipeline
         </span>
       </div>
 

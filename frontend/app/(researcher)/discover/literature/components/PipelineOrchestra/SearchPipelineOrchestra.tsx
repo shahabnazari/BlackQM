@@ -669,12 +669,16 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
               </div>
             </div>
 
-            {/* Phase 10.168: Apple-Grade Layout - Galaxy left, Detail panels under stages */}
+            {/* Phase 10.203: Correct Layout - BIG Galaxy left, Vertical panels right */}
+            {/* Galaxy takes maximum space, panels stacked vertically on right */}
             <div className="relative flex items-start gap-6 max-lg:flex-col">
-              {/* Left: Milky Way Galaxy */}
+              {/* Left: BIGGER Galaxy - flex-1 to take all available space */}
               <div
-                className="relative flex-shrink-0"
-                style={{ width: constellationSize.width, height: constellationSize.height }}
+                className="relative flex-1 min-w-0 rounded-2xl overflow-hidden"
+                style={{
+                  minHeight: constellationSize.height,
+                  background: 'radial-gradient(ellipse at 50% 50%, rgba(59, 130, 246, 0.08) 0%, transparent 70%)',
+                }}
               >
                 <PipelineErrorBoundary>
                   <OrbitalSourceConstellation
@@ -710,115 +714,98 @@ export const SearchPipelineOrchestra = memo<SearchPipelineOrchestraProps>(
                 )}
               </div>
 
-              {/* Right: Detail Panels with Vertical Arrows */}
-              <div className="flex-1 flex gap-5 max-lg:flex-col max-lg:w-full">
-                {/* RANK → Semantic Ranking Column */}
-                <div className="flex-1 flex flex-col items-center">
-                  {/* Vertical Arrow from RANK stage */}
-                  {showSemanticBrain && (pipelineState.currentStage === 'rank' || semanticTier) && (
-                    <motion.div
-                      className="flex flex-col items-center mb-3"
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2, ...SPRING_PRESETS.soft }}
-                    >
-                      {/* Arrow line */}
-                      <div className="w-px h-8 bg-gradient-to-b from-purple-500/60 to-purple-500/20" />
-                      {/* Arrow head */}
-                      <svg width="12" height="8" viewBox="0 0 12 8" className="text-purple-500/60">
-                        <path d="M6 8L0 0h12L6 8z" fill="currentColor" />
-                      </svg>
-                      {/* Label */}
-                      <span className="text-[10px] font-medium text-purple-400/80 uppercase tracking-wider mt-1">
-                        from RANK
+              {/* Right: VERTICAL Stack - Panels stacked on top of each other */}
+              <div className="flex flex-col gap-4 w-[240px] flex-shrink-0 max-lg:w-full max-lg:flex-row max-lg:gap-4">
+                {/* SEMANTIC RANKING Panel - Under RANK */}
+                {showSemanticBrain && (pipelineState.currentStage === 'rank' || semanticTier) && (
+                  <motion.div
+                    className="flex flex-col max-lg:flex-1"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.2, ...SPRING_PRESETS.soft }}
+                  >
+                    {/* Label showing connection to RANK stage */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 rounded-full bg-purple-500" />
+                      <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider">
+                        From RANK Stage
                       </span>
-                    </motion.div>
-                  )}
+                    </div>
 
-                  {/* Semantic Ranking Panel */}
-                  {showSemanticBrain && (pipelineState.currentStage === 'rank' || semanticTier) && (
                     <PipelineErrorBoundary>
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.3, ...SPRING_PRESETS.soft }}
-                        className="w-full"
-                      >
-                        <SemanticBrainVisualizer
-                          currentTier={semanticTier}
-                          tierStats={semanticTierStats}
-                          papersProcessed={
-                            semanticTierStats.get('complete')?.papersProcessed ||
-                            semanticTierStats.get('refined')?.papersProcessed ||
-                            semanticTierStats.get('immediate')?.papersProcessed ||
-                            0
-                          }
-                          totalPapers={pipelineState.qualitySelection.rankedCount || papersFound}
-                          isProcessing={stage === 'ranking'}
-                          onTierHover={handleTierHover}
-                          onTierClick={handleTierClick}
-                          reducedMotion={reducedMotion}
-                        />
-                      </motion.div>
+                      <SemanticBrainVisualizer
+                        currentTier={semanticTier}
+                        tierStats={semanticTierStats}
+                        papersProcessed={
+                          semanticTierStats.get('complete')?.papersProcessed ||
+                          semanticTierStats.get('refined')?.papersProcessed ||
+                          semanticTierStats.get('immediate')?.papersProcessed ||
+                          0
+                        }
+                        totalPapers={pipelineState.qualitySelection.rankedCount || papersFound}
+                        isProcessing={stage === 'ranking'}
+                        onTierHover={handleTierHover}
+                        onTierClick={handleTierClick}
+                        reducedMotion={reducedMotion}
+                      />
                     </PipelineErrorBoundary>
-                  )}
-                </div>
+                  </motion.div>
+                )}
 
-                {/* SELECT → Quality Filter Column */}
-                <div className="flex-1 flex flex-col items-center">
-                  {/* Vertical Arrow from SELECT stage */}
-                  {showQualityFunnel && (
-                    stage === 'selecting' ||
-                    stage === 'complete' ||
-                    pipelineState.qualitySelection.isSelecting ||
-                    pipelineState.qualitySelection.isComplete
-                  ) && (
-                    <motion.div
-                      className="flex flex-col items-center mb-3"
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.25, ...SPRING_PRESETS.soft }}
-                    >
-                      {/* Arrow line */}
-                      <div className="w-px h-8 bg-gradient-to-b from-cyan-500/60 to-cyan-500/20" />
-                      {/* Arrow head */}
-                      <svg width="12" height="8" viewBox="0 0 12 8" className="text-cyan-500/60">
-                        <path d="M6 8L0 0h12L6 8z" fill="currentColor" />
-                      </svg>
-                      {/* Label */}
-                      <span className="text-[10px] font-medium text-cyan-400/80 uppercase tracking-wider mt-1">
-                        from SELECT
+                {/* Vertical Flow Arrow between panels */}
+                {showSemanticBrain && showQualityFunnel && (pipelineState.currentStage === 'rank' || semanticTier) && (
+                  stage === 'selecting' ||
+                  stage === 'complete' ||
+                  pipelineState.qualitySelection.isSelecting ||
+                  pipelineState.qualitySelection.isComplete
+                ) && (
+                  <motion.div
+                    className="flex flex-col items-center py-1 max-lg:hidden"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.3 }}
+                  >
+                    <div className="w-px h-3 bg-gradient-to-b from-purple-500/50 to-cyan-500/50" />
+                    <svg width="8" height="6" viewBox="0 0 8 6" className="text-cyan-500/60 -mt-0.5">
+                      <path d="M4 6L0 0h8L4 6z" fill="currentColor" />
+                    </svg>
+                  </motion.div>
+                )}
+
+                {/* QUALITY FILTER Panel - Under SELECT */}
+                {showQualityFunnel && (
+                  stage === 'selecting' ||
+                  stage === 'complete' ||
+                  pipelineState.qualitySelection.isSelecting ||
+                  pipelineState.qualitySelection.isComplete
+                ) && (
+                  <motion.div
+                    className="flex flex-col max-lg:flex-1"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.3, ...SPRING_PRESETS.soft }}
+                  >
+                    {/* Label showing connection to SELECT stage */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-2 h-2 rounded-full bg-cyan-500" />
+                      <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-wider">
+                        From SELECT Stage
                       </span>
-                    </motion.div>
-                  )}
+                    </div>
 
-                  {/* Quality Filter Panel */}
-                  {showQualityFunnel && (
-                    stage === 'selecting' ||
-                    stage === 'complete' ||
-                    pipelineState.qualitySelection.isSelecting ||
-                    pipelineState.qualitySelection.isComplete
-                  ) && (
                     <PipelineErrorBoundary>
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.35, ...SPRING_PRESETS.soft }}
-                        className="w-full"
-                      >
-                        <QualityFunnelVisualizer
-                          rankedCount={pipelineState.qualitySelection.rankedCount}
-                          selectedCount={pipelineState.qualitySelection.selectedCount}
-                          targetCount={pipelineState.qualitySelection.targetCount}
-                          avgQualityScore={pipelineState.qualitySelection.avgQualityScore}
-                          isSelecting={pipelineState.qualitySelection.isSelecting || stage === 'selecting'}
-                          isComplete={pipelineState.qualitySelection.isComplete || stage === 'complete'}
-                          reducedMotion={reducedMotion}
-                        />
-                      </motion.div>
+                      <QualityFunnelVisualizer
+                        rankedCount={pipelineState.qualitySelection.rankedCount}
+                        selectedCount={pipelineState.qualitySelection.selectedCount}
+                        targetCount={pipelineState.qualitySelection.targetCount}
+                        avgQualityScore={pipelineState.qualitySelection.avgQualityScore}
+                        isSelecting={pipelineState.qualitySelection.isSelecting || stage === 'selecting'}
+                        isComplete={pipelineState.qualitySelection.isComplete || stage === 'complete'}
+                        reducedMotion={reducedMotion}
+                      />
                     </PipelineErrorBoundary>
-                  )}
-                </div>
+                  </motion.div>
+                )}
               </div>
             </div>
           </div>

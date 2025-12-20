@@ -28,6 +28,7 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { useAutoFullTextDetection } from '@/lib/hooks/useAutoFullTextDetection';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { BookOpen, Lightbulb, Search, Network, Loader2 } from 'lucide-react';
@@ -161,7 +162,23 @@ export default function LiteratureSearchPage(): JSX.Element {
     return papers.filter((p) => p && p.id && selectedPapers.has(p.id));
   }, [papers, selectedPapers]);
 
-  // Content analysis for purpose wizard
+  // Netflix-Grade: Auto full-text detection for accurate counts
+  // Automatically detects full-text when papers are selected so Content Analysis shows accurate stats
+  // Triggers automatically when 10+ papers are selected (no user action needed)
+  const { isDetecting: isDetectingFullText, detectedCount, totalDetecting } = useAutoFullTextDetection({
+    papers: selectedPapersList,
+    enabled: selectedPapersList.length >= 10, // Only detect if 10+ papers selected
+    minPapers: 10,
+    onDetectionComplete: (count) => {
+      logger.info(`Auto full-text detection complete: ${count} papers have full-text available`, 'LiteratureSearchPage');
+      // Content analysis will automatically update via useMemo dependency on selectedPapersList
+      if (count > 0) {
+        toast.success(`Full-text detected for ${count} papers`, { duration: 3000 });
+      }
+    },
+  });
+
+  // Content analysis for purpose wizard (re-runs when papers update after detection)
   const contentAnalysis = useMemo(() => {
     return analyzeContentForExtraction(selectedPapersList);
   }, [selectedPapersList]);
@@ -374,6 +391,9 @@ export default function LiteratureSearchPage(): JSX.Element {
           onPurposeSelected={handlePurposeSelected}
           onCancel={handlePurposeCancel}
           contentAnalysis={contentAnalysis}
+          isDetectingFullText={isDetectingFullText}
+          detectedCount={detectedCount}
+          totalDetecting={totalDetecting}
           {...(extractionPurpose ? { initialPurpose: extractionPurpose } : {})}
         />
       )}

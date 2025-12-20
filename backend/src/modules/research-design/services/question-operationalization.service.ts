@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { PrismaService } from '../../../common/prisma.service';
 import {
   ResearchQuestionService,
@@ -147,24 +146,14 @@ export interface OperationalizationResult {
 @Injectable()
 export class QuestionOperationalizationService {
   private readonly logger = new Logger(QuestionOperationalizationService.name);
-  private openai!: OpenAI;
   private readonly maxRetries = 3;
   private operationalizationCache = new Map<string, OperationalizationResult>();
 
   constructor(
     private prisma: PrismaService,
-    private configService: ConfigService,
+    private unifiedAIService: UnifiedAIService,
     private researchQuestionService: ResearchQuestionService,
-  ) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-    if (!apiKey) {
-      this.logger.warn(
-        'OPENAI_API_KEY not configured - AI features will be limited',
-      );
-    } else {
-      this.openai = new OpenAI({ apiKey });
-    }
-  }
+  ) {}
 
   /**
    * Main method: Operationalize research question into measurable survey items
@@ -262,10 +251,6 @@ export class QuestionOperationalizationService {
   private async extractConstructs(
     request: OperationalizationRequest,
   ): Promise<Construct[]> {
-    if (!this.openai) {
-      return this.getFallbackConstructs(request);
-    }
-
     const prompt = `Extract all theoretical constructs from this research question:
 
 Research Question: "${request.researchQuestion}"
@@ -298,21 +283,15 @@ Return JSON: {
 }`;
 
     try {
-      const response = await this.openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert research methodologist specializing in construct operationalization. Use Creswell (2017) and Shadish et al. (2002) frameworks.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for construct extraction
+      const aiResponse = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.3,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert research methodologist specializing in construct operationalization. Use Creswell (2017) and Shadish et al. (2002) frameworks.',
+        jsonMode: true,
       });
 
-      const content = response.choices[0].message.content;
+      const content = aiResponse.content;
       if (!content) {
         return this.getFallbackConstructs(request);
       }
@@ -340,10 +319,6 @@ Return JSON: {
     constructs: Construct[],
     request: OperationalizationRequest,
   ): Promise<OperationalizedVariable[]> {
-    if (!this.openai) {
-      return this.getFallbackVariables(constructs);
-    }
-
     const variables: OperationalizedVariable[] = [];
 
     for (const construct of constructs) {
@@ -372,21 +347,15 @@ Return JSON: {
 }`;
 
       try {
-        const response = await this.openai.chat.completions.create({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are an expert in psychometric scale development. Reference Churchill (1979) and DeVellis (2016) for best practices.',
-            },
-            { role: 'user', content: prompt },
-          ],
+        // Phase 10.195: Use UnifiedAIService for variable operationalization
+        const aiResponse = await this.unifiedAIService.generateCompletion(prompt, {
+          model: 'smart',
           temperature: 0.3,
-          response_format: { type: 'json_object' },
+          systemPrompt: 'You are an expert in psychometric scale development. Reference Churchill (1979) and DeVellis (2016) for best practices.',
+          jsonMode: true,
         });
 
-        const content = response.choices[0].message.content;
+        const content = aiResponse.content;
         if (!content) {
           continue;
         }
@@ -424,10 +393,6 @@ Return JSON: {
     variables: OperationalizedVariable[],
     request: OperationalizationRequest,
   ): Promise<SurveyMeasurementItem[]> {
-    if (!this.openai) {
-      return this.getFallbackItems(variables);
-    }
-
     const allItems: SurveyMeasurementItem[] = [];
 
     for (const variable of variables) {
@@ -470,21 +435,15 @@ Return JSON: {
 }`;
 
       try {
-        const response = await this.openai.chat.completions.create({
-          model: 'gpt-4',
-          messages: [
-            {
-              role: 'system',
-              content:
-                'You are an expert in survey item development. Generate high-quality, validated measurement items following Churchill (1979) scale development paradigm.',
-            },
-            { role: 'user', content: prompt },
-          ],
+        // Phase 10.195: Use UnifiedAIService for item generation
+        const aiResponse = await this.unifiedAIService.generateCompletion(prompt, {
+          model: 'smart',
           temperature: 0.7,
-          response_format: { type: 'json_object' },
+          systemPrompt: 'You are an expert in survey item development. Generate high-quality, validated measurement items following Churchill (1979) scale development paradigm.',
+          jsonMode: true,
         });
 
-        const content = response.choices[0].message.content;
+        const content = aiResponse.content;
         if (!content) {
           continue;
         }

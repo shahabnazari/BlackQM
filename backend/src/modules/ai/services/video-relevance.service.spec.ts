@@ -22,11 +22,11 @@ import {
   VideoMetadata,
   RelevanceScore,
 } from './video-relevance.service';
-import { OpenAIService } from './openai.service';
+import { UnifiedAIService } from './unified-ai.service';
 
 describe('VideoRelevanceService', () => {
   let service: VideoRelevanceService;
-  let openaiService: jest.Mocked<OpenAIService>;
+  let unifiedAIService: jest.Mocked<UnifiedAIService>;
 
   const mockVideoMetadata: VideoMetadata = {
     videoId: 'test-video-123',
@@ -51,13 +51,17 @@ describe('VideoRelevanceService', () => {
       priority: 'high',
     }),
     tokens: 150,
-    responseTime: 500,
+    inputTokens: 100,
+    outputTokens: 50,
+    responseTimeMs: 500,
     cached: false,
     cost: 0.001,
+    provider: 'groq',
+    model: 'llama-3.3-70b-versatile',
   };
 
   beforeEach(async () => {
-    const mockOpenAIService = {
+    const mockUnifiedAIService = {
       generateCompletion: jest.fn(),
     };
 
@@ -65,14 +69,14 @@ describe('VideoRelevanceService', () => {
       providers: [
         VideoRelevanceService,
         {
-          provide: OpenAIService,
-          useValue: mockOpenAIService,
+          provide: UnifiedAIService,
+          useValue: mockUnifiedAIService,
         },
       ],
     }).compile();
 
     service = module.get<VideoRelevanceService>(VideoRelevanceService);
-    openaiService = module.get(OpenAIService) as jest.Mocked<OpenAIService>;
+    unifiedAIService = module.get(UnifiedAIService) as jest.Mocked<UnifiedAIService>;
   });
 
   afterEach(() => {
@@ -81,7 +85,7 @@ describe('VideoRelevanceService', () => {
 
   describe('scoreVideoRelevance', () => {
     it('should score a video with valid AI response', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       const result = await service.scoreVideoRelevance(
         mockVideoMetadata,
@@ -101,7 +105,7 @@ describe('VideoRelevanceService', () => {
         },
       });
 
-      expect(openaiService.generateCompletion).toHaveBeenCalledWith(
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledWith(
         expect.stringContaining('climate change research methods'),
         expect.objectContaining({
           model: 'smart',
@@ -111,7 +115,7 @@ describe('VideoRelevanceService', () => {
     });
 
     it('should cache results and return cached values on subsequent calls', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       // First call
       const result1 = await service.scoreVideoRelevance(
@@ -126,18 +130,22 @@ describe('VideoRelevanceService', () => {
       );
 
       expect(result1).toEqual(result2);
-      expect(openaiService.generateCompletion).toHaveBeenCalledTimes(1); // Only called once
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledTimes(1); // Only called once
     });
 
     it('should handle AI response with markdown code blocks', async () => {
       const responseWithMarkdown = {
         content: '```json\n' + mockAIResponse.content + '\n```',
         tokens: 150,
-        responseTime: 500,
+        inputTokens: 100,
+        outputTokens: 50,
+        responseTimeMs: 500,
         cached: false,
         cost: 0.001,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       };
-      openaiService.generateCompletion.mockResolvedValue(responseWithMarkdown);
+      unifiedAIService.generateCompletion.mockResolvedValue(responseWithMarkdown);
 
       const result = await service.scoreVideoRelevance(
         mockVideoMetadata,
@@ -149,12 +157,16 @@ describe('VideoRelevanceService', () => {
     });
 
     it('should return safe defaults when AI response is invalid', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: 'Invalid response without JSON',
         tokens: 10,
-        responseTime: 100,
+        inputTokens: 5,
+        outputTokens: 5,
+        responseTimeMs: 100,
         cached: false,
         cost: 0.0001,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.scoreVideoRelevance(
@@ -177,7 +189,7 @@ describe('VideoRelevanceService', () => {
     });
 
     it('should return error fallback on OpenAI service failure', async () => {
-      openaiService.generateCompletion.mockRejectedValue(
+      unifiedAIService.generateCompletion.mockRejectedValue(
         new Error('OpenAI API error'),
       );
 
@@ -201,7 +213,7 @@ describe('VideoRelevanceService', () => {
     });
 
     it('should clamp scores to 0-100 range', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify({
           score: 150, // Invalid score > 100
           reasoning: 'Test',
@@ -212,9 +224,13 @@ describe('VideoRelevanceService', () => {
           priority: 'high',
         }),
         tokens: 100,
-        responseTime: 300,
+        inputTokens: 60,
+        outputTokens: 40,
+        responseTimeMs: 300,
         cached: false,
         cost: 0.0008,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.scoreVideoRelevance(
@@ -227,7 +243,7 @@ describe('VideoRelevanceService', () => {
     });
 
     it('should auto-recommend transcription for scores > 60', async () => {
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify({
           score: 75,
           reasoning: 'Relevant content',
@@ -238,9 +254,13 @@ describe('VideoRelevanceService', () => {
           priority: 'medium',
         }),
         tokens: 120,
-        responseTime: 400,
+        inputTokens: 70,
+        outputTokens: 50,
+        responseTimeMs: 400,
         cached: false,
         cost: 0.0009,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.scoreVideoRelevance(
@@ -260,7 +280,7 @@ describe('VideoRelevanceService', () => {
       ];
 
       for (const testCase of testCases) {
-        openaiService.generateCompletion.mockResolvedValue({
+        unifiedAIService.generateCompletion.mockResolvedValue({
           content: JSON.stringify({
             score: testCase.score,
             reasoning: 'Test',
@@ -271,9 +291,13 @@ describe('VideoRelevanceService', () => {
             // priority missing - should auto-set based on score
           }),
           tokens: 100,
-          responseTime: 300,
+          inputTokens: 60,
+          outputTokens: 40,
+          responseTimeMs: 300,
           cached: false,
           cost: 0.0008,
+          provider: 'groq',
+          model: 'llama-3.3-70b-versatile',
         });
 
         const result = await service.scoreVideoRelevance(
@@ -295,7 +319,7 @@ describe('VideoRelevanceService', () => {
         { ...mockVideoMetadata, videoId: 'video-3' },
       ];
 
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       const results = await service.batchScoreVideos(videos, 'climate change');
 
@@ -303,7 +327,7 @@ describe('VideoRelevanceService', () => {
       expect(results[0].videoId).toBe('video-1');
       expect(results[1].videoId).toBe('video-2');
       expect(results[2].videoId).toBe('video-3');
-      expect(openaiService.generateCompletion).toHaveBeenCalledTimes(3);
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledTimes(3);
     });
 
     it('should handle partial failures gracefully', async () => {
@@ -312,7 +336,7 @@ describe('VideoRelevanceService', () => {
         { ...mockVideoMetadata, videoId: 'video-2' },
       ];
 
-      openaiService.generateCompletion
+      unifiedAIService.generateCompletion
         .mockResolvedValueOnce(mockAIResponse)
         .mockRejectedValueOnce(new Error('API error'));
 
@@ -332,16 +356,20 @@ describe('VideoRelevanceService', () => {
         { ...mockVideoMetadata, videoId: 'video-3', duration: 900 }, // 15 min
       ];
 
-      openaiService.generateCompletion
+      unifiedAIService.generateCompletion
         .mockResolvedValueOnce({
           content: JSON.stringify({
             ...JSON.parse(mockAIResponse.content),
             score: 90,
           }),
           tokens: 150,
-          responseTime: 500,
+          inputTokens: 100,
+          outputTokens: 50,
+          responseTimeMs: 500,
           cached: false,
           cost: 0.001,
+          provider: 'groq',
+          model: 'llama-3.3-70b-versatile',
         })
         .mockResolvedValueOnce({
           content: JSON.stringify({
@@ -349,9 +377,13 @@ describe('VideoRelevanceService', () => {
             score: 70,
           }),
           tokens: 150,
-          responseTime: 500,
+          inputTokens: 100,
+          outputTokens: 50,
+          responseTimeMs: 500,
           cached: false,
           cost: 0.001,
+          provider: 'groq',
+          model: 'llama-3.3-70b-versatile',
         })
         .mockResolvedValueOnce({
           content: JSON.stringify({
@@ -359,9 +391,13 @@ describe('VideoRelevanceService', () => {
             score: 80,
           }),
           tokens: 150,
-          responseTime: 500,
+          inputTokens: 100,
+          outputTokens: 50,
+          responseTimeMs: 500,
           cached: false,
           cost: 0.001,
+          provider: 'groq',
+          model: 'llama-3.3-70b-versatile',
         });
 
       const result = await service.selectTopVideos(
@@ -382,16 +418,20 @@ describe('VideoRelevanceService', () => {
         { ...mockVideoMetadata, videoId: 'video-2', duration: 1200 }, // 20 min = $0.12
       ];
 
-      openaiService.generateCompletion
+      unifiedAIService.generateCompletion
         .mockResolvedValueOnce({
           content: JSON.stringify({
             ...JSON.parse(mockAIResponse.content),
             score: 90,
           }),
           tokens: 150,
-          responseTime: 500,
+          inputTokens: 100,
+          outputTokens: 50,
+          responseTimeMs: 500,
           cached: false,
           cost: 0.001,
+          provider: 'groq',
+          model: 'llama-3.3-70b-versatile',
         })
         .mockResolvedValueOnce({
           content: JSON.stringify({
@@ -399,9 +439,13 @@ describe('VideoRelevanceService', () => {
             score: 85,
           }),
           tokens: 150,
-          responseTime: 500,
+          inputTokens: 100,
+          outputTokens: 50,
+          responseTimeMs: 500,
           cached: false,
           cost: 0.001,
+          provider: 'groq',
+          model: 'llama-3.3-70b-versatile',
         });
 
       const result = await service.selectTopVideos(videos, 'climate change', 2);
@@ -415,16 +459,20 @@ describe('VideoRelevanceService', () => {
         { ...mockVideoMetadata, videoId: 'video-1', duration: 600 },
       ];
 
-      openaiService.generateCompletion.mockResolvedValue({
+      unifiedAIService.generateCompletion.mockResolvedValue({
         content: JSON.stringify({
           ...JSON.parse(mockAIResponse.content),
           score: 90,
           isAcademic: true,
         }),
         tokens: 150,
-        responseTime: 500,
+        inputTokens: 100,
+        outputTokens: 50,
+        responseTimeMs: 500,
         cached: false,
         cost: 0.001,
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
       });
 
       const result = await service.selectTopVideos(videos, 'climate change', 1);
@@ -438,7 +486,7 @@ describe('VideoRelevanceService', () => {
   describe('clearExpiredCache', () => {
     it('should remove expired cache entries', async () => {
       // Create a cache entry
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
       await service.scoreVideoRelevance(mockVideoMetadata, 'climate change');
 
       // Manually expire cache by accessing private cache (for testing)
@@ -448,19 +496,19 @@ describe('VideoRelevanceService', () => {
       service.clearExpiredCache();
 
       // Since cache hasn't expired (24 hours), should still return cached result
-      openaiService.generateCompletion.mockClear();
+      unifiedAIService.generateCompletion.mockClear();
       await service.scoreVideoRelevance(mockVideoMetadata, 'climate change');
-      expect(openaiService.generateCompletion).not.toHaveBeenCalled();
+      expect(unifiedAIService.generateCompletion).not.toHaveBeenCalled();
     });
   });
 
   describe('buildScoringPrompt', () => {
     it('should build comprehensive scoring prompt', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       await service.scoreVideoRelevance(mockVideoMetadata, 'climate change');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
 
       expect(calledPrompt).toContain('climate change');
       expect(calledPrompt).toContain(mockVideoMetadata.title);
@@ -480,7 +528,7 @@ describe('VideoRelevanceService', () => {
         viewCount: undefined,
       };
 
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       const result = await service.scoreVideoRelevance(
         videoWithoutViews,
@@ -488,7 +536,7 @@ describe('VideoRelevanceService', () => {
       );
 
       expect(result.score).toBe(85);
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('N/A'); // View count shows N/A
     });
 
@@ -498,11 +546,11 @@ describe('VideoRelevanceService', () => {
         duration: 30, // 30 seconds
       };
 
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       await service.scoreVideoRelevance(shortVideo, 'climate change');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('1 minutes'); // Rounds to 1 minute
     });
 
@@ -512,23 +560,23 @@ describe('VideoRelevanceService', () => {
         duration: 7200, // 2 hours
       };
 
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       await service.scoreVideoRelevance(longVideo, 'climate change');
 
-      const calledPrompt = openaiService.generateCompletion.mock.calls[0][0];
+      const calledPrompt = unifiedAIService.generateCompletion.mock.calls[0][0];
       expect(calledPrompt).toContain('120 minutes'); // 2 hours
     });
 
     it('should differentiate cache keys for different contexts', async () => {
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       // Same video, different contexts
       await service.scoreVideoRelevance(mockVideoMetadata, 'climate change');
       await service.scoreVideoRelevance(mockVideoMetadata, 'research methods');
 
       // Should call OpenAI twice (different cache keys)
-      expect(openaiService.generateCompletion).toHaveBeenCalledTimes(2);
+      expect(unifiedAIService.generateCompletion).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -539,7 +587,7 @@ describe('VideoRelevanceService', () => {
         videoId: `video-${i}`,
       }));
 
-      openaiService.generateCompletion.mockResolvedValue(mockAIResponse);
+      unifiedAIService.generateCompletion.mockResolvedValue(mockAIResponse);
 
       const startTime = Date.now();
       await service.batchScoreVideos(videos, 'climate change');

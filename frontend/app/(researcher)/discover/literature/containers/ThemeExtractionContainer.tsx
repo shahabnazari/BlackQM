@@ -100,6 +100,7 @@ import { useThemeApiHandlers } from '@/lib/hooks/useThemeApiHandlers';
 import { useResearchOutputHandlers } from '@/lib/hooks/useResearchOutputHandlers';
 import { useExtractionWorkflow } from '@/lib/hooks/useExtractionWorkflow';
 import { useUserUsage } from '@/lib/hooks/useUserUsage'; // Phase 10.175
+import { useAutoFullTextDetection } from '@/lib/hooks/useAutoFullTextDetection'; // Netflix-Grade: Auto full-text detection
 
 // Utils
 import { mapUnifiedThemeToTheme } from '../utils/theme-mapping';
@@ -196,6 +197,10 @@ interface ExtractionModalsProps {
   onPurposeCancel: () => void;
   onModeSelected: (mode: 'quick' | 'guided') => Promise<void>;
   onCloseModeModal: () => void;
+  /** Netflix-Grade: Full-text detection status for progress indicator */
+  isDetectingFullText?: boolean;
+  detectedCount?: number;
+  totalDetecting?: number;
 }
 
 /**
@@ -220,6 +225,9 @@ const ExtractionModals = React.memo(function ExtractionModals({
   onPurposeCancel,
   onModeSelected,
   onCloseModeModal,
+  isDetectingFullText = false,
+  detectedCount = 0,
+  totalDetecting = 0,
 }: ExtractionModalsProps): JSX.Element | null {
   // Phase 10.98.3: Don't show progress modal when inline mode is enabled
   const shouldShowProgressModal = progress !== null && !showProgressInline;
@@ -272,6 +280,9 @@ const ExtractionModals = React.memo(function ExtractionModals({
           onPurposeSelected={onPurposeSelected}
           onCancel={onPurposeCancel}
           contentAnalysis={contentAnalysis}
+          isDetectingFullText={isDetectingFullText}
+          detectedCount={detectedCount}
+          totalDetecting={totalDetecting}
           {...(extractionPurpose ? { initialPurpose: extractionPurpose } : {})}
         />
       )}
@@ -532,6 +543,22 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
 
     return filtered;
   }, [papers, selectedPaperIdsSet]);
+
+  // Netflix-Grade: Auto full-text detection for accurate counts
+  // Automatically detects full-text when papers are selected so Content Analysis shows accurate stats
+  // Triggers automatically when 10+ papers are selected (no user action needed)
+  const fullTextDetectionStatus = useAutoFullTextDetection({
+    papers: selectedPapersList,
+    enabled: selectedPapersList.length >= 10, // Only detect if 10+ papers selected
+    minPapers: 10,
+    onDetectionComplete: (count: number) => {
+      logger.info(`Auto full-text detection complete: ${count} papers have full-text available`, 'ThemeExtractionContainer');
+      // Content analysis will automatically update via useMemo dependency on selectedPapersList
+      if (count > 0) {
+        toast.success(`Full-text detected for ${count} papers`, { duration: 3000 });
+      }
+    },
+  });
 
   // Content analysis for purpose wizard
   // Phase 10.97 Day 3 BUGFIX: Always compute (not lazy) to prevent timing issues
@@ -1089,6 +1116,9 @@ export const ThemeExtractionContainer = React.memo(function ThemeExtractionConta
           onPurposeCancel={handlePurposeCancel}
           onModeSelected={handleModeSelected}
           onCloseModeModal={handleCloseModeModal}
+          isDetectingFullText={fullTextDetectionStatus.isDetecting}
+          detectedCount={fullTextDetectionStatus.detectedCount}
+          totalDetecting={fullTextDetectionStatus.totalDetecting}
         />
 
         {/* Phase 10.97 Day 2: Theme to Q-Statement Generation Modal */}

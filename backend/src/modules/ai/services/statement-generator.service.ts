@@ -1,5 +1,70 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OpenAIService } from './openai.service';
+// Phase 10.185 Week 2: Migrated from OpenAIService to UnifiedAIService
+// Benefits: Groq FREE tier first, 80% cost reduction with Gemini fallback
+import { UnifiedAIService } from './unified-ai.service';
+
+// ============================================================================
+// SYSTEM PROMPTS (Phase 10.185: Netflix-grade prompt engineering)
+// ============================================================================
+
+/**
+ * System prompt for Q-methodology statement generation
+ * Used for: generateStatements, enhanceStatements, generateStatementsFromMultiPlatform
+ */
+const STATEMENT_GENERATION_SYSTEM_PROMPT = `You are an expert Q-methodology researcher specializing in creating statements for Q-sort studies. Your task is to generate clear, concise, and sortable statements.
+
+CRITICAL REQUIREMENTS:
+1. Statements must be sortable on an agree-disagree scale
+2. Use neutral, academic language (avoid loaded or biased terms)
+3. Each statement must express a single, clear viewpoint
+4. Statements should be 10-100 characters for optimal sorting
+5. Cover diverse perspectives including supporters, critics, and neutral observers
+6. Output ONLY the requested format - no additional commentary
+
+You are precise, consistent, and always follow the exact output format requested.`;
+
+/**
+ * System prompt for statement validation and quality assessment
+ * Used for: validateStatements, checkCulturalSensitivity
+ */
+const STATEMENT_VALIDATION_SYSTEM_PROMPT = `You are an expert Q-methodology researcher skilled at evaluating statement quality for research validity.
+
+EVALUATION CRITERIA:
+1. Clarity - Is the statement easy to understand?
+2. Neutrality - Is the language free from bias or leading terms?
+3. Sortability - Can participants easily place this on an agree-disagree scale?
+4. Uniqueness - Does this express a distinct viewpoint?
+5. Cultural sensitivity - Is it appropriate for diverse audiences?
+
+OUTPUT: Valid JSON only. No explanations outside the JSON structure.`;
+
+/**
+ * System prompt for statement rewriting and alternatives
+ * Used for: suggestNeutralAlternative, generateStatementVariations
+ */
+const STATEMENT_REWRITING_SYSTEM_PROMPT = `You are an expert at refining academic statements while preserving their core meaning.
+
+REQUIREMENTS:
+1. Maintain the original concept and viewpoint
+2. Remove any loaded or emotional language
+3. Ensure the result is sortable on an agree-disagree scale
+4. Keep similar length to the original
+5. Use clear, academic language
+
+Output ONLY the rewritten statement(s), no additional text.`;
+
+/**
+ * System prompt for perspective and guideline generation
+ * Used for: generatePerspectiveGuidelines
+ */
+const PERSPECTIVE_GUIDELINES_SYSTEM_PROMPT = `You are a Q-methodology expert identifying stakeholder perspectives for research studies.
+
+Your task is to identify key perspectives and stakeholder groups that should be represented in a Q-study. For each perspective, consider:
+1. Their typical stance on the topic
+2. Their motivations and concerns
+3. How their viewpoint differs from others
+
+Output a clear, organized list of perspectives.`;
 
 export interface Statement {
   id: string;
@@ -24,6 +89,21 @@ export interface StatementValidation {
     suggestion: string;
   }[];
   improvements: string[];
+}
+
+/**
+ * Cultural sensitivity analysis result
+ * Phase 10.185 Week 2: Added proper typing (no more Promise<any>)
+ */
+export interface CulturalSensitivityResult {
+  flaggedStatements: Array<{
+    index: number;
+    statement: string;
+    issue: string;
+    severity: 'low' | 'medium' | 'high';
+  }>;
+  recommendations: string[];
+  regionsAnalyzed: string[];
 }
 
 /**
@@ -59,7 +139,10 @@ export interface StatementWithProvenance extends Statement {
 export class StatementGeneratorService {
   private readonly logger = new Logger(StatementGeneratorService.name);
 
-  constructor(private openai: OpenAIService) {}
+  constructor(
+    // Phase 10.185 Week 2: Unified AI Service with Groq FREE → Gemini → OpenAI fallback
+    private readonly aiService: UnifiedAIService,
+  ) {}
 
   async generateStatements(
     topic: string,
@@ -83,14 +166,24 @@ export class StatementGeneratorService {
       maxLength,
     );
 
-    const response = await this.openai.generateCompletion(prompt, {
-      model: 'smart',
-      temperature: 0.8,
-      maxTokens: 2000,
-      userId,
-    });
+    try {
+      // Phase 10.185 Week 2: Use UnifiedAIService with system prompt
+      // Provider chain: Groq FREE → Gemini (80% cheaper) → OpenAI
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.8,
+        maxTokens: 2000,
+        systemPrompt: STATEMENT_GENERATION_SYSTEM_PROMPT,
+        cache: true, // Enable response caching for repeated similar prompts
+        userId,
+      });
 
-    return this.parseStatements(response.content);
+      return this.parseStatements(response.content);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to generate statements: ${errMsg}`);
+      throw new Error('Failed to generate statements');
+    }
   }
 
   private buildGenerationPrompt(
@@ -204,17 +297,21 @@ Provide a JSON response with:
   "improvements": ["General suggestion 1", "General suggestion 2"]
 }`;
 
-    const response = await this.openai.generateCompletion(validationPrompt, {
+    // Phase 10.185 Week 2: Use UnifiedAIService with validation system prompt
+    const response = await this.aiService.generateCompletion(validationPrompt, {
       model: 'smart',
       temperature: 0.3,
       maxTokens: 1500,
+      systemPrompt: STATEMENT_VALIDATION_SYSTEM_PROMPT,
+      cache: true,
       userId,
     });
 
     try {
       return JSON.parse(response.content);
-    } catch (error) {
-      this.logger.error('Failed to parse validation response:', error);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to parse validation response: ${errMsg}`);
       return {
         overallQuality: 70,
         issues: [],
@@ -240,14 +337,24 @@ Requirements:
 
 Provide only the rewritten statement, nothing else.`;
 
-    const response = await this.openai.generateCompletion(prompt, {
-      model: 'fast',
-      temperature: 0.5,
-      maxTokens: 100,
-      userId,
-    });
+    try {
+      // Phase 10.185 Week 2: Use UnifiedAIService with rewriting system prompt
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'fast',
+        temperature: 0.5,
+        maxTokens: 100,
+        systemPrompt: STATEMENT_REWRITING_SYSTEM_PROMPT,
+        cache: true,
+        userId,
+      });
 
-    return response.content.trim().replace(/^["']|["']$/g, '');
+      return response.content.trim().replace(/^["']|["']$/g, '');
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to suggest neutral alternative: ${errMsg}`);
+      // Return original statement as fallback
+      return statement;
+    }
   }
 
   async generatePerspectiveGuidelines(
@@ -263,17 +370,26 @@ For each perspective, provide:
 
 Format as a simple list of perspectives.`;
 
-    const response = await this.openai.generateCompletion(prompt, {
-      model: 'fast',
-      temperature: 0.6,
-      maxTokens: 500,
-      userId,
-    });
+    try {
+      // Phase 10.185 Week 2: Use UnifiedAIService with perspective system prompt
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'fast',
+        temperature: 0.6,
+        maxTokens: 500,
+        systemPrompt: PERSPECTIVE_GUIDELINES_SYSTEM_PROMPT,
+        cache: true,
+        userId,
+      });
 
-    return response.content
-      .split('\n')
-      .filter((line) => line.trim())
-      .map((line) => line.replace(/^\d+\.\s*/, '').trim());
+      return response.content
+        .split('\n')
+        .filter((line) => line.trim())
+        .map((line) => line.replace(/^\d+\.\s*/, '').trim());
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to generate perspective guidelines: ${errMsg}`);
+      return [];
+    }
   }
 
   async enhanceStatements(
@@ -300,21 +416,36 @@ Requirements:
 
 Format: S[number]: [enhanced statement] | [perspective] | [polarity]`;
 
-    const response = await this.openai.generateCompletion(prompt, {
-      model: 'smart',
-      temperature: 0.6,
-      maxTokens: 2000,
-      userId,
-    });
+    try {
+      // Phase 10.185 Week 2: Use UnifiedAIService with generation system prompt
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.6,
+        maxTokens: 2000,
+        systemPrompt: STATEMENT_GENERATION_SYSTEM_PROMPT,
+        cache: true,
+        userId,
+      });
 
-    return this.parseStatements(response.content);
+      return this.parseStatements(response.content);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to enhance statements: ${errMsg}`);
+      // Return original statements as fallback
+      return statements.map((text, i) => ({
+        id: `S${String(i + 1).padStart(2, '0')}`,
+        text,
+        perspective: 'General',
+        polarity: 'neutral' as const,
+      }));
+    }
   }
 
   async checkCulturalSensitivity(
     statements: string[],
     targetRegions: string[] = ['Global'],
     userId?: string,
-  ): Promise<any> {
+  ): Promise<CulturalSensitivityResult> {
     const prompt = `Review these Q-methodology statements for cultural sensitivity issues considering ${targetRegions.join(', ')} audiences:
 
 ${statements.map((s, i) => `${i + 1}. ${s}`).join('\n')}
@@ -325,19 +456,34 @@ Identify:
 3. Language that could be offensive or inappropriate in certain cultures
 4. Suggestions for more inclusive alternatives
 
-Return as JSON with flagged statements and recommendations.`;
-
-    const response = await this.openai.generateCompletion(prompt, {
-      model: 'smart',
-      temperature: 0.3,
-      maxTokens: 1500,
-      userId,
-    });
+Return as JSON with:
+{
+  "flaggedStatements": [{"index": 1, "statement": "...", "issue": "...", "severity": "low|medium|high"}],
+  "recommendations": ["..."],
+  "regionsAnalyzed": ["..."]
+}`;
 
     try {
-      return JSON.parse(response.content);
-    } catch {
-      return { flaggedStatements: [], recommendations: [] };
+      // Phase 10.185 Week 2: Use UnifiedAIService with validation system prompt
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.3,
+        maxTokens: 1500,
+        systemPrompt: STATEMENT_VALIDATION_SYSTEM_PROMPT,
+        cache: true,
+        userId,
+      });
+
+      const parsed = JSON.parse(response.content);
+      return {
+        flaggedStatements: parsed.flaggedStatements || [],
+        recommendations: parsed.recommendations || [],
+        regionsAnalyzed: targetRegions,
+      };
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to check cultural sensitivity: ${errMsg}`);
+      return { flaggedStatements: [], recommendations: [], regionsAnalyzed: targetRegions };
     }
   }
 
@@ -358,18 +504,27 @@ Requirements:
 
 Return only the variations, one per line.`;
 
-    const response = await this.openai.generateCompletion(prompt, {
-      model: 'fast',
-      temperature: 0.7,
-      maxTokens: 300,
-      userId,
-    });
+    try {
+      // Phase 10.185 Week 2: Use UnifiedAIService with rewriting system prompt
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'fast',
+        temperature: 0.7,
+        maxTokens: 300,
+        systemPrompt: STATEMENT_REWRITING_SYSTEM_PROMPT,
+        cache: true,
+        userId,
+      });
 
-    return response.content
-      .split('\n')
-      .filter((line) => line.trim())
-      .map((line) => line.replace(/^\d+\.\s*/, '').trim())
-      .slice(0, count);
+      return response.content
+        .split('\n')
+        .filter((line) => line.trim())
+        .map((line) => line.replace(/^\d+\.\s*/, '').trim())
+        .slice(0, count);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to generate statement variations: ${errMsg}`);
+      return [];
+    }
   }
 
   /**
@@ -404,12 +559,13 @@ Return only the variations, one per line.`;
     const statements: StatementWithProvenance[] = [];
 
     for (const themeData of themes) {
-      // Build prompt with source citations
-      const sourcesDescription = this.buildSourcesDescription(
-        themeData.sources,
-      );
+      try {
+        // Build prompt with source citations
+        const sourcesDescription = this.buildSourcesDescription(
+          themeData.sources,
+        );
 
-      const prompt = `Generate a Q-methodology statement about "${themeData.theme}" for a study on "${studyContext}".
+        const prompt = `Generate a Q-methodology statement about "${themeData.theme}" for a study on "${studyContext}".
 
 CONTEXT:
 This theme appears across multiple sources:
@@ -424,42 +580,50 @@ REQUIREMENTS:
 
 Return only the statement text, nothing else.`;
 
-      const response = await this.openai.generateCompletion(prompt, {
-        model: 'smart',
-        temperature: 0.7,
-        maxTokens: 100,
-        userId,
-      });
+        // Phase 10.185 Week 2: Use UnifiedAIService with generation system prompt
+        const response = await this.aiService.generateCompletion(prompt, {
+          model: 'smart',
+          temperature: 0.7,
+          maxTokens: 100,
+          systemPrompt: STATEMENT_GENERATION_SYSTEM_PROMPT,
+          cache: true,
+          userId,
+        });
 
-      const statementText = response.content.trim().replace(/^["']|["']$/g, '');
+        const statementText = response.content.trim().replace(/^["']|["']$/g, '');
 
-      // Calculate provenance
-      const sources: MultimediaSource[] = themeData.sources.map((source) => ({
-        platform: source.platform,
-        id: source.id,
-        title: source.title,
-        author: source.author,
-        url: source.url,
-        timestamp: source.timestamp,
-        timestampUrl: this.buildTimestampUrl(source),
-        quote: source.quote,
-        confidence: this.getSourceConfidence(source.platform),
-      }));
+        // Calculate provenance
+        const sources: MultimediaSource[] = themeData.sources.map((source) => ({
+          platform: source.platform,
+          id: source.id,
+          title: source.title,
+          author: source.author,
+          url: source.url,
+          timestamp: source.timestamp,
+          timestampUrl: this.buildTimestampUrl(source),
+          quote: source.quote,
+          confidence: this.getSourceConfidence(source.platform),
+        }));
 
-      const sourceBreakdown = this.calculateSourceBreakdown(sources);
-      const overallConfidence = this.calculateOverallConfidence(sources);
-      const hasTimestamps = sources.some((s) => s.timestamp !== undefined);
+        const sourceBreakdown = this.calculateSourceBreakdown(sources);
+        const overallConfidence = this.calculateOverallConfidence(sources);
+        const hasTimestamps = sources.some((s) => s.timestamp !== undefined);
 
-      statements.push({
-        id: `S${String(statements.length + 1).padStart(2, '0')}`,
-        text: statementText,
-        perspective: themeData.theme,
-        polarity: 'neutral',
-        sources,
-        sourceBreakdown,
-        overallConfidence,
-        hasTimestamps,
-      });
+        statements.push({
+          id: `S${String(statements.length + 1).padStart(2, '0')}`,
+          text: statementText,
+          perspective: themeData.theme,
+          polarity: 'neutral',
+          sources,
+          sourceBreakdown,
+          overallConfidence,
+          hasTimestamps,
+        });
+      } catch (error: unknown) {
+        const errMsg = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Failed to generate statement for theme "${themeData.theme}": ${errMsg}`);
+        // Continue with next theme, don't fail entire batch
+      }
     }
 
     this.logger.log(

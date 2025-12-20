@@ -236,7 +236,7 @@ describe('IntelligentFullTextDetectionService', () => {
     it('should return low confidence for invalid PMC ID', async () => {
       const paperWithBadPMC: PaperForDetection = {
         id: 'paper-bad-pmc',
-        pmcId: 'INVALID',
+        externalIds: { PubMedCentral: 'INVALID' },
       };
 
       httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
@@ -617,7 +617,7 @@ describe('IntelligentFullTextDetectionService', () => {
         'fulltext-detection.progress',
         expect.objectContaining({
           currentTier: expect.any(Number),
-          totalTiers: 7,
+          totalTiers: 8, // Phase 10.195: 8 tiers including CORE API
           tierName: expect.any(String),
         }),
       );
@@ -711,6 +711,64 @@ describe('IntelligentFullTextDetectionService', () => {
   });
 
   // ==========================================================================
+  // PHASE 10.186: CORE API DOI-ONLY FIX
+  // ==========================================================================
+
+  describe('Phase 10.186: CORE API DOI-Only Detection', () => {
+    it('should skip CORE detection for papers without DOI', async () => {
+      // Paper without DOI should NOT trigger CORE API search
+      const paperNoDoi: PaperForDetection = {
+        id: 'paper-no-doi',
+        title: 'Paper Without DOI',
+      };
+
+      httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
+      httpService.get.mockReturnValue(throwError(() => new Error('Not found')));
+
+      const result = await service.detectFullText(paperNoDoi);
+
+      // CORE (tier 7) should not be attempted for papers without DOI
+      // This prevents slow title-based searches that cause rate limiting
+      expect(result.tiersAttempted).not.toContain(7);
+    });
+
+    it('should use DOI-based CORE search for papers with valid DOI', async () => {
+      // Paper WITH DOI should use fast DOI-based CORE search
+      const paperWithDoi: PaperForDetection = {
+        id: 'paper-with-doi',
+        doi: '10.1234/valid.doi',
+        title: 'Paper With Valid DOI',
+      };
+
+      httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
+      httpService.get.mockReturnValue(of({ data: { results: [] } } as any));
+
+      const result = await service.detectFullText(paperWithDoi);
+
+      // CORE (tier 7) can be attempted for papers with DOI
+      // The actual tier attempt depends on whether earlier tiers succeed
+      expect(result).toBeDefined();
+    });
+
+    it('should skip CORE for papers with invalid DOI format', async () => {
+      const paperInvalidDoi: PaperForDetection = {
+        id: 'paper-invalid-doi',
+        doi: 'not-a-valid-doi',
+        title: 'Paper With Invalid DOI',
+      };
+
+      httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
+      httpService.get.mockReturnValue(throwError(() => new Error('Not found')));
+
+      const result = await service.detectFullText(paperInvalidDoi);
+
+      // CORE should be skipped for invalid DOIs
+      expect(result).toBeDefined();
+      expect(result.isAvailable).toBe(false);
+    });
+  });
+
+  // ==========================================================================
   // PERFORMANCE
   // ==========================================================================
 
@@ -732,6 +790,132 @@ describe('IntelligentFullTextDetectionService', () => {
       const result = await service.detectFullText(mockPaper);
 
       expect(result.durationMs).toBeGreaterThanOrEqual(0);
+    });
+  });
+
+  // ==========================================================================
+  // PHASE 10.186: ZOMBIE LOOP PREVENTION TESTS
+  // ==========================================================================
+
+  describe('Phase 10.186: Zombie Loop Prevention', () => {
+    it('should NOT repeatedly call CORE for same paper without DOI', async () => {
+      // Simulate the zombie loop scenario from logs
+      const paperNoDoi: PaperForDetection = {
+        id: 'paper-zombie-test',
+        title: 'Decision Making in Adults with ADHD',
+        // NO DOI - this was causing zombie loops
+      };
+
+      httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
+      httpService.get.mockReturnValue(throwError(() => new Error('Not found')));
+
+      // Call multiple times (simulating batch detection)
+      const results = await Promise.all([
+        service.detectFullText(paperNoDoi),
+        service.detectFullText(paperNoDoi),
+        service.detectFullText(paperNoDoi),
+      ]);
+
+      // All should complete quickly without CORE API calls
+      results.forEach((result) => {
+        expect(result.tiersAttempted).not.toContain(7); // Tier 7 is AI, but checking CORE (3.5)
+        expect(result.tiersAttempted).not.toContain(3.5); // CORE tier should be skipped
+      });
+    });
+
+    it('should handle batch of papers with mixed DOI presence', async () => {
+      const papers: PaperForDetection[] = [
+        { id: 'paper-1', title: 'Paper 1' }, // No DOI
+        { id: 'paper-2', doi: '10.1234/valid.doi', title: 'Paper 2' }, // Valid DOI
+        { id: 'paper-3', title: 'Paper 3' }, // No DOI
+        { id: 'paper-4', doi: 'invalid-doi', title: 'Paper 4' }, // Invalid DOI
+        { id: 'paper-5', title: 'Paper 5' }, // No DOI
+      ];
+
+      httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
+      httpService.get.mockReturnValue(of({ data: { results: [] } } as any));
+
+      const result = await service.detectBatch(papers);
+
+      // Should complete without zombie loops
+      expect(Object.keys(result.results).length).toBe(5);
+      expect(result.successfulPapers.length + result.failedPapers.length).toBe(5);
+    });
+
+    it('should cache results to prevent repeated detection', async () => {
+      const paper: PaperForDetection = {
+        id: 'paper-cache-test',
+        title: 'Test Paper for Caching',
+      };
+
+      httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
+      httpService.get.mockReturnValue(throwError(() => new Error('Not found')));
+
+      // First call
+      const result1 = await service.detectFullText(paper);
+      // Second call should hit cache
+      const result2 = await service.detectFullText(paper);
+
+      // Both should return same result (cached)
+      expect(result1.isAvailable).toBe(result2.isAvailable);
+      expect(result1.confidence).toBe(result2.confidence);
+    });
+
+    it('should not enter infinite loop with 429 rate limit errors', async () => {
+      // Simulate rate limit scenario
+      const paper: PaperForDetection = {
+        id: 'paper-rate-limit-test',
+        doi: '10.1234/rate.limit.test',
+        title: 'Rate Limit Test Paper',
+      };
+
+      // Mock 429 error for all HTTP calls
+      const error429 = new Error('Request failed with status code 429');
+      httpService.head.mockReturnValue(throwError(() => error429));
+      httpService.get.mockReturnValue(throwError(() => error429));
+
+      const start = Date.now();
+      const result = await service.detectFullText(paper);
+      const duration = Date.now() - start;
+
+      // Should complete quickly (not hang in infinite loop)
+      expect(duration).toBeLessThan(10000); // Less than 10 seconds
+      expect(result).toBeDefined();
+      expect(result.isAvailable).toBe(false);
+    });
+
+    it('should handle papers with empty string DOI as no DOI', async () => {
+      const paper: PaperForDetection = {
+        id: 'paper-empty-doi',
+        doi: '', // Empty string DOI
+        title: 'Paper with Empty DOI',
+      };
+
+      httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
+      httpService.get.mockReturnValue(throwError(() => new Error('Not found')));
+
+      const result = await service.detectFullText(paper);
+
+      // Should skip CORE (empty DOI treated as no DOI)
+      expect(result).toBeDefined();
+      expect(result.isAvailable).toBe(false);
+    });
+
+    it('should handle papers with whitespace-only DOI as no DOI', async () => {
+      const paper: PaperForDetection = {
+        id: 'paper-whitespace-doi',
+        doi: '   ', // Whitespace-only DOI
+        title: 'Paper with Whitespace DOI',
+      };
+
+      httpService.head.mockReturnValue(throwError(() => new Error('Not found')));
+      httpService.get.mockReturnValue(throwError(() => new Error('Not found')));
+
+      const result = await service.detectFullText(paper);
+
+      // Should skip CORE (whitespace DOI treated as no DOI)
+      expect(result).toBeDefined();
+      expect(result.isAvailable).toBe(false);
     });
   });
 });

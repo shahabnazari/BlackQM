@@ -1,9 +1,11 @@
 /**
  * Phase 10.170 Week 4+: Constant Comparison Engine Tests
+ * Phase 10.185: Netflix-Grade - Added Vitest imports for ESM compatibility
  *
  * Tests for Security Critical #12: O(n²) optimization with similarity cache
  */
 
+import { describe, it, expect, beforeEach } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConstantComparisonEngine } from '../constant-comparison.service';
 

@@ -6,9 +6,30 @@ import {
 import { PrismaService } from '../../../common/prisma.service';
 import { LiteratureService } from '../../literature/literature.service';
 import { LiteratureComparisonService } from '../../analysis/services/literature-comparison.service';
-import { OpenAIService } from '../../ai/services/openai.service';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { ReportService } from '../report.service';
 import { CacheService } from '../../../common/cache.service';
+
+// ============================================================================
+// Phase 10.185 Week 3: System Prompts for Literature Report Generation
+// ============================================================================
+
+const REPORT_GENERATION_SYSTEM_PROMPT = `You are an expert academic writer specializing in Q-methodology research papers.
+
+Your role is to:
+1. Generate clear, well-structured academic prose
+2. Synthesize research findings with literature
+3. Follow academic writing conventions
+4. Maintain consistent scholarly tone
+
+Guidelines:
+- Use formal academic language
+- Include in-text citations in (Author, Year) format
+- Structure arguments logically
+- Connect findings to theoretical frameworks
+- Avoid jargon while maintaining precision
+
+Adapt output format based on the specific section being generated.`;
 
 /**
  * Literature-Enhanced Report Service - Phase 9 Day 10
@@ -32,7 +53,7 @@ export class LiteratureReportService {
     private readonly prisma: PrismaService,
     private readonly literatureService: LiteratureService,
     private readonly literatureComparisonService: LiteratureComparisonService,
-    private readonly openAIService: OpenAIService,
+    private readonly unifiedAIService: UnifiedAIService,
     private readonly reportService: ReportService,
     private readonly cacheService: CacheService,
   ) {}
@@ -264,8 +285,13 @@ ${citations.join('\n\n')}
       4. Key concepts and definitions
     `;
 
-    const frameworkResponse =
-      await this.openAIService.generateCompletion(prompt);
+    const frameworkResponse = await this.unifiedAIService.generateCompletion(
+      prompt,
+      {
+        cache: true,
+        systemPrompt: REPORT_GENERATION_SYSTEM_PROMPT,
+      },
+    );
 
     return `
 ## Theoretical Framework
@@ -421,7 +447,13 @@ Factor analysis was performed using centroid factor extraction followed by varim
       Include in-text citations in (Author, Year) format.
     `;
 
-    const reviewResponse = await this.openAIService.generateCompletion(prompt);
+    const reviewResponse = await this.unifiedAIService.generateCompletion(
+      prompt,
+      {
+        cache: true,
+        systemPrompt: REPORT_GENERATION_SYSTEM_PROMPT,
+      },
+    );
 
     return `### ${theme}\n\n${reviewResponse.content}`;
   }
@@ -442,7 +474,10 @@ Factor analysis was performed using centroid factor extraction followed by varim
       4. Identifies emerging trends
     `;
 
-    const response = await this.openAIService.generateCompletion(prompt);
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      cache: true,
+      systemPrompt: REPORT_GENERATION_SYSTEM_PROMPT,
+    });
     return response.content;
   }
 
@@ -458,7 +493,10 @@ Factor analysis was performed using centroid factor extraction followed by varim
       4. How Q-methodology can address this gap
     `;
 
-    const response = await this.openAIService.generateCompletion(prompt);
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      cache: true,
+      systemPrompt: REPORT_GENERATION_SYSTEM_PROMPT,
+    });
     return response.content;
   }
 
@@ -575,7 +613,10 @@ Q-methodology is particularly suited for this investigation as it allows for the
       Include: Purpose, Methods, Results, Conclusions
     `;
 
-    const response = await this.openAIService.generateCompletion(prompt);
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      cache: true,
+      systemPrompt: REPORT_GENERATION_SYSTEM_PROMPT,
+    });
     return response.content;
   }
 
@@ -607,7 +648,10 @@ Q-methodology is particularly suited for this investigation as it allows for the
       4. Study objectives
     `;
 
-    const response = await this.openAIService.generateCompletion(prompt);
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      cache: true,
+      systemPrompt: REPORT_GENERATION_SYSTEM_PROMPT,
+    });
     return response.content;
   }
 
@@ -653,7 +697,10 @@ Q-methodology is particularly suited for this investigation as it allows for the
       4. Final thoughts
     `;
 
-    const response = await this.openAIService.generateCompletion(prompt);
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      cache: true,
+      systemPrompt: REPORT_GENERATION_SYSTEM_PROMPT,
+    });
     return response.content;
   }
 
@@ -782,7 +829,10 @@ Additional avenues for investigation include:
       Focus on actionable insights and real-world applications.
     `;
 
-    const response = await this.openAIService.generateCompletion(prompt);
+    const response = await this.unifiedAIService.generateCompletion(prompt, {
+      cache: true,
+      systemPrompt: REPORT_GENERATION_SYSTEM_PROMPT,
+    });
     return response.content;
   }
 }

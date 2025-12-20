@@ -1,6 +1,63 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { OpenAIService } from './openai.service';
-import { AICostService } from './ai-cost.service';
+// Phase 10.185 Week 2: Migrated from OpenAIService to UnifiedAIService
+// Benefits: Groq FREE tier first, 80% cost reduction with Gemini fallback
+import { UnifiedAIService } from './unified-ai.service';
+
+// ============================================================================
+// SYSTEM PROMPTS (Phase 10.185: Netflix-grade prompt engineering)
+// ============================================================================
+
+/**
+ * System prompt for questionnaire generation
+ * Used for: generateQuestionnaire
+ */
+const QUESTIONNAIRE_GENERATION_SYSTEM_PROMPT = `You are an expert survey designer specializing in Q-methodology research. Your task is to generate high-quality survey questions.
+
+CRITICAL REQUIREMENTS:
+1. Questions must be clear, unambiguous, and neutral
+2. Avoid leading or biased language
+3. Each question should serve a specific research purpose
+4. Include a mix of question types as specified
+5. Questions must be appropriate for the target audience
+6. Output ONLY valid JSON - no markdown, no explanations
+
+QUESTION QUALITY STANDARDS:
+- Use simple, accessible language
+- Avoid double-barreled questions (asking two things at once)
+- Provide appropriate response options
+- Include clear skip logic if requested
+
+You are precise, consistent, and always follow the exact output format requested.`;
+
+/**
+ * System prompt for follow-up question suggestions
+ * Used for: suggestFollowUpQuestions
+ */
+const FOLLOWUP_QUESTIONS_SYSTEM_PROMPT = `You are an expert at designing follow-up survey questions based on response patterns.
+
+Your task is to suggest insightful follow-up questions that:
+1. Dig deeper into interesting patterns in the responses
+2. Clarify ambiguous or unexpected answers
+3. Explore themes that emerged from initial responses
+4. Maintain consistency with the existing question style
+
+Output ONLY valid JSON arrays with the same structure as the original questions.`;
+
+/**
+ * System prompt for question quality validation
+ * Used for: validateQuestionQuality
+ */
+const QUESTION_VALIDATION_SYSTEM_PROMPT = `You are an expert at evaluating survey question quality for research validity.
+
+EVALUATION CRITERIA:
+1. Leading or biased language - Does the question push toward a particular answer?
+2. Ambiguous wording - Could the question be interpreted multiple ways?
+3. Double-barreled questions - Does it ask about two things at once?
+4. Inappropriate assumptions - Does it assume facts not in evidence?
+5. Missing response options - Are all reasonable answers covered?
+6. Logical flow - Does the question sequence make sense?
+
+OUTPUT: Valid JSON only with overallScore (0-1) and issues array.`;
 
 export interface GeneratedQuestion {
   id: string;
@@ -22,8 +79,9 @@ export class QuestionnaireGeneratorService {
   private readonly logger = new Logger(QuestionnaireGeneratorService.name);
 
   constructor(
-    private readonly openaiService: OpenAIService,
-    private readonly costService: AICostService,
+    // Phase 10.185 Week 2: Unified AI Service with Groq FREE → Gemini → OpenAI fallback
+    // Note: Cost tracking is now handled internally by UnifiedAIService
+    private readonly aiService: UnifiedAIService,
   ) {}
 
   async generateQuestionnaire(
@@ -43,10 +101,16 @@ export class QuestionnaireGeneratorService {
         includeSkipLogic,
       );
 
-      const response = await this.openaiService.generateCompletion(
-        prompt,
-        { model: 'smart', temperature: 0.8, maxTokens: 2000, userId },
-      );
+      // Phase 10.185 Week 2: Use UnifiedAIService with questionnaire system prompt
+      // Provider chain: Groq FREE → Gemini (80% cheaper) → OpenAI
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.8,
+        maxTokens: 2000,
+        systemPrompt: QUESTIONNAIRE_GENERATION_SYSTEM_PROMPT,
+        cache: true,
+        userId,
+      });
 
       const questions = this.parseQuestions(response.content);
 
@@ -55,11 +119,12 @@ export class QuestionnaireGeneratorService {
         this.logger.warn(`Only generated ${questions.length} out of ${questionCount} questions`);
       }
 
-      // Cost tracking is handled by OpenAIService
+      // Cost tracking is now handled internally by UnifiedAIService
 
       return questions;
-    } catch (error) {
-      this.logger.error('Failed to generate questionnaire:', error);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to generate questionnaire: ${errMsg}`);
       throw new Error('Failed to generate questionnaire');
     }
   }
@@ -151,7 +216,7 @@ Ensure questions are:
 
   async suggestFollowUpQuestions(
     existingQuestions: GeneratedQuestion[],
-    responses: Record<string, any>,
+    responses: Record<string, unknown>,
     userId: string,
   ): Promise<GeneratedQuestion[]> {
     try {
@@ -164,14 +229,20 @@ Responses: ${JSON.stringify(responses)}
 Generate insightful follow-up questions that dig deeper into interesting patterns or responses.
 Return as JSON array with same structure as before.`;
 
-      const response = await this.openaiService.generateCompletion(
-        prompt,
-        { model: 'smart', temperature: 0.9, maxTokens: 1000, userId },
-      );
+      // Phase 10.185 Week 2: Use UnifiedAIService with follow-up system prompt
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.9,
+        maxTokens: 1000,
+        systemPrompt: FOLLOWUP_QUESTIONS_SYSTEM_PROMPT,
+        cache: false, // Don't cache - responses vary by context
+        userId,
+      });
 
       return this.parseQuestions(response.content);
-    } catch (error) {
-      this.logger.error('Failed to suggest follow-up questions:', error);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to suggest follow-up questions: ${errMsg}`);
       return [];
     }
   }
@@ -208,19 +279,25 @@ Return JSON with:
   ]
 }`;
 
-      const response = await this.openaiService.generateCompletion(
-        prompt,
-        { model: 'smart', temperature: 0.3, maxTokens: 1000, userId },
-      );
+      // Phase 10.185 Week 2: Use UnifiedAIService with validation system prompt
+      const response = await this.aiService.generateCompletion(prompt, {
+        model: 'smart',
+        temperature: 0.3,
+        maxTokens: 1000,
+        systemPrompt: QUESTION_VALIDATION_SYSTEM_PROMPT,
+        cache: true,
+        userId,
+      });
 
       const result = JSON.parse(response.content.match(/\{[\s\S]*\}/)?.[0] || '{"overallScore": 0.5, "issues": []}');
-      
+
       return {
         overallScore: result.overallScore || 0.5,
         issues: result.issues || [],
       };
-    } catch (error) {
-      this.logger.error('Failed to validate question quality:', error);
+    } catch (error: unknown) {
+      const errMsg = error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to validate question quality: ${errMsg}`);
       return { overallScore: 0.5, issues: [] };
     }
   }

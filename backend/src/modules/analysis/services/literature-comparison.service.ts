@@ -7,8 +7,28 @@ import { PrismaService } from '../../../common/prisma.service';
 import { LiteratureService } from '../../literature/literature.service';
 import { QAnalysisService } from './q-analysis.service';
 import { InterpretationService } from './interpretation.service';
-import { OpenAIService } from '../../ai/services/openai.service';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { CacheService } from '../../../common/cache.service';
+
+// ============================================================================
+// Phase 10.185 Week 3: System Prompts for Literature Comparison
+// ============================================================================
+
+const FINDING_CATEGORIZATION_SYSTEM_PROMPT = `You are an expert research analyst specializing in comparing empirical findings to existing literature.
+
+Your role is to:
+1. Categorize research findings as confirmatory, novel, contradictory, or extension
+2. Identify supporting citations from the literature
+3. Assess significance level (1-10 scale)
+4. Determine theoretical implications
+
+Categories:
+- Confirmatory: Supports existing research with new evidence
+- Novel: Discovery not documented in existing literature
+- Contradictory: Challenges or contradicts existing findings
+- Extension: Builds upon and extends existing work
+
+Output analysis with: Category, Supporting citations, Significance level, Theoretical implications.`;
 
 /**
  * Literature-Analysis Comparison Service - Phase 9 Day 10
@@ -29,7 +49,7 @@ export class LiteratureComparisonService {
     private readonly literatureService: LiteratureService,
     private readonly qAnalysisService: QAnalysisService,
     private readonly interpretationService: InterpretationService,
-    private readonly openAIService: OpenAIService,
+    private readonly unifiedAIService: UnifiedAIService,
     private readonly cacheService: CacheService,
   ) {}
 
@@ -134,8 +154,13 @@ export class LiteratureComparisonService {
       - Theoretical implications
     `;
 
-    const analysisResponse =
-      await this.openAIService.generateCompletion(prompt);
+    const analysisResponse = await this.unifiedAIService.generateCompletion(
+      prompt,
+      {
+        cache: true, // Phase 10.185: Enable caching
+        systemPrompt: FINDING_CATEGORIZATION_SYSTEM_PROMPT,
+      },
+    );
     const analysis = analysisResponse.content;
 
     return {

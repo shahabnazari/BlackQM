@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
+import { UnifiedAIService } from '../../ai/services/unified-ai.service';
 import { PrismaService } from '../../../common/prisma.service';
 
 /**
@@ -185,23 +184,13 @@ export interface GenerateCompleteSurveyOptions {
 @Injectable()
 export class EnhancedThemeIntegrationService {
   private readonly logger = new Logger(EnhancedThemeIntegrationService.name);
-  private openai!: OpenAI;
   private questionCache = new Map<string, ResearchQuestionSuggestion[]>();
   private hypothesisCache = new Map<string, HypothesisSuggestion[]>();
 
   constructor(
     _prisma: PrismaService,
-    private readonly configService: ConfigService,
-  ) {
-    const apiKey = this.configService.get<string>('OPENAI_API_KEY');
-    if (!apiKey) {
-      this.logger.warn(
-        'OPENAI_API_KEY not configured - AI features will be limited',
-      );
-    } else {
-      this.openai = new OpenAI({ apiKey });
-    }
-  }
+    private readonly unifiedAIService: UnifiedAIService,
+  ) {}
 
   /**
    * Suggest research questions from themes
@@ -212,9 +201,6 @@ export class EnhancedThemeIntegrationService {
   ): Promise<ResearchQuestionSuggestion[]> {
     this.logger.log(
       `[suggestResearchQuestions] Suggesting research questions from ${options.themes.length} themes`,
-    );
-    this.logger.log(
-      `[suggestResearchQuestions] OpenAI available: ${!!this.openai}`,
     );
     this.logger.log(
       `[suggestResearchQuestions] Theme names: ${options.themes.map((t) => t.name).join(', ')}`,
@@ -228,17 +214,17 @@ export class EnhancedThemeIntegrationService {
 
     const questions: ResearchQuestionSuggestion[] = [];
 
-    // Use AI if available, otherwise use template-based approach
-    if (this.openai) {
+    // Phase 10.195: Always use AI via UnifiedAIService (with fallback to templates on error)
+    try {
       this.logger.log('[suggestResearchQuestions] Using AI generation');
       const aiQuestions = await this.generateQuestionsWithAI(options);
       this.logger.log(
         `[suggestResearchQuestions] AI returned ${aiQuestions.length} questions`,
       );
       questions.push(...aiQuestions);
-    } else {
-      this.logger.log(
-        '[suggestResearchQuestions] Using template generation (no OpenAI)',
+    } catch (error: any) {
+      this.logger.warn(
+        `[suggestResearchQuestions] AI generation failed, using templates: ${error.message}`,
       );
       const templateQuestions = this.generateQuestionsWithTemplates(options);
       this.logger.log(
@@ -279,11 +265,14 @@ export class EnhancedThemeIntegrationService {
 
     const hypotheses: HypothesisSuggestion[] = [];
 
-    // Use AI if available
-    if (this.openai) {
+    // Phase 10.195: Always use AI via UnifiedAIService (with fallback to templates on error)
+    try {
       const aiHypotheses = await this.generateHypothesesWithAI(options);
       hypotheses.push(...aiHypotheses);
-    } else {
+    } catch (error: any) {
+      this.logger.warn(
+        `Hypothesis AI generation failed, using templates: ${error.message}`,
+      );
       const templateHypotheses = this.generateHypothesesWithTemplates(options);
       hypotheses.push(...templateHypotheses);
     }
@@ -467,22 +456,16 @@ IMPORTANT: Return a JSON object (not an array) with a "questions" key containing
 }`;
 
     try {
-      this.logger.log('[AI] Calling OpenAI API for research questions...');
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert research methodologist specializing in research question formulation and SQUARE-IT framework. You MUST return valid JSON with a "questions" array.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      this.logger.log('[AI] Calling UnifiedAIService for research questions...');
+      // Phase 10.195: Use UnifiedAIService for research question suggestions
+      const aiResponse = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.7,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert research methodologist specializing in research question formulation and SQUARE-IT framework. You MUST return valid JSON with a "questions" array.',
+        jsonMode: true,
       });
 
-      const response = completion.choices[0]?.message?.content;
+      const response = aiResponse.content;
       this.logger.log(
         `[AI] Received response length: ${response?.length || 0} chars`,
       );
@@ -692,21 +675,15 @@ Return a JSON array with this structure:
 }]`;
 
     try {
-      const completion = await this.openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You are an expert research methodologist specializing in hypothesis formulation and experimental design.',
-          },
-          { role: 'user', content: prompt },
-        ],
+      // Phase 10.195: Use UnifiedAIService for hypothesis suggestions
+      const aiResponse = await this.unifiedAIService.generateCompletion(prompt, {
+        model: 'smart',
         temperature: 0.7,
-        response_format: { type: 'json_object' },
+        systemPrompt: 'You are an expert research methodologist specializing in hypothesis formulation and experimental design.',
+        jsonMode: true,
       });
 
-      const response = completion.choices[0]?.message?.content;
+      const response = aiResponse.content;
       if (!response) {
         throw new Error('Empty response from OpenAI');
       }

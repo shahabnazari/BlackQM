@@ -1,6 +1,7 @@
 /**
  * BM25 Relevance Scoring Tests
  * Phase 10.942 Day 5 - Testing & Validation
+ * Phase 10.185: Netflix-Grade - Added Vitest imports for ESM compatibility
  *
  * Tests for:
  * - BM25 algorithm correctness
@@ -10,6 +11,7 @@
  * - Edge cases
  */
 
+import { describe, it, expect } from 'vitest';
 import { calculateBM25RelevanceScore } from '../relevance-scoring.util';
 
 describe('BM25 Relevance Scoring (Phase 10.942)', () => {
@@ -202,15 +204,24 @@ describe('BM25 Relevance Scoring (Phase 10.942)', () => {
     });
 
     it('should apply penalty for low term coverage (<40%)', () => {
-      const paper = {
+      // Phase 10.185: Fixed test - compare penalized vs unpenalized scores
+      // Low coverage (<40%) should get 0.5x penalty per applyTermCoverageMultiplier()
+      const paperLowCoverage = {
         title: 'Single Term Paper',
         abstract: 'Content that only matches one term.',
       };
+      const paperHighCoverage = {
+        title: 'Term one two three four five',
+        abstract: 'Content with term one two three four five matching.',
+      };
 
-      const score = calculateBM25RelevanceScore(paper, 'term one two three four five');
+      const lowScore = calculateBM25RelevanceScore(paperLowCoverage, 'term one two three four five');
+      const highScore = calculateBM25RelevanceScore(paperHighCoverage, 'term one two three four five');
 
-      // Low coverage should reduce score
-      expect(score).toBeLessThan(50); // Arbitrary threshold for low coverage
+      // High coverage score should be significantly higher than penalized low coverage
+      expect(highScore).toBeGreaterThan(lowScore);
+      // Low coverage penalty (0.5x) should keep score reasonable but reduced
+      expect(lowScore).toBeLessThan(highScore * 0.8);
     });
   });
 

@@ -20,9 +20,10 @@
  * @since Phase 10.100 Phase 9
  */
 
-import { Injectable, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, Logger, BadRequestException, forwardRef, Inject } from '@nestjs/common';
 import { PrismaService } from '../../../common/prisma.service';
 import { PDFQueueService } from './pdf-queue.service';
+import { UniversalAbstractEnrichmentService } from './universal-abstract-enrichment.service';
 import { SavePaperDto } from '../dto/literature.dto';
 import {
   type SanitizedPaperInput,
@@ -101,6 +102,8 @@ export class PaperDatabaseService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly pdfQueueService: PDFQueueService,
+    @Inject(forwardRef(() => UniversalAbstractEnrichmentService))
+    private readonly abstractEnrichmentService: UniversalAbstractEnrichmentService,
   ) {}
 
   // ==========================================================================
@@ -254,12 +257,19 @@ export class PaperDatabaseService {
 
       // Save paper to database
       // Phase 10.943: Type-safe JSON converters (zero `as any`)
+      // Phase 10.184: Calculate abstractWordCount during save (not just full-text extraction)
+      const abstractWordCount = this.calculateWordCount(saveDto.abstract);
+
       const paper = await this.prisma.paper.create({
         data: {
           title: sanitized.title,
           authors: toJsonStringArray(saveDto.authors) ?? [],
           year: saveDto.year ?? new Date().getFullYear(),
           abstract: saveDto.abstract,
+          // Phase 10.184: Save abstractWordCount during initial save
+          abstractWordCount: abstractWordCount > 0 ? abstractWordCount : null,
+          // Phase 10.184: wordCount = abstractWordCount if no full-text yet
+          wordCount: abstractWordCount > 0 ? abstractWordCount : null,
           doi: sanitized.doi,
           pmid: sanitized.pmid,
           url: sanitized.url,
@@ -280,6 +290,8 @@ export class PaperDatabaseService {
           pdfUrl: saveDto.pdfUrl ?? null,
           hasFullText: saveDto.hasFullText ?? false,
           fullTextStatus: saveDto.fullTextStatus ?? 'not_fetched',
+          // Quality score (paper-intrinsic, independent of search query)
+          qualityScore: saveDto.qualityScore ?? null,
         },
       });
 
@@ -332,6 +344,33 @@ export class PaperDatabaseService {
           pmid: sanitized.pmid ?? 'undefined',
           url: sanitized.url ?? 'undefined',
         });
+      }
+
+      // Phase 10.185: Proactive abstract enrichment for papers WITHOUT abstracts
+      // This prevents the "218 papers with no content" issue in theme extraction
+      // Enrichment happens in background (fire-and-forget) to not block save
+      const hasAbstract = Boolean(saveDto.abstract && saveDto.abstract.trim().length > 50);
+      const canEnrichAbstract = Boolean(sanitized.doi || sanitized.url || sanitized.pmid);
+
+      if (!hasAbstract && canEnrichAbstract) {
+        this.logger.log(
+          `📝 [Phase 10.185] Paper ${paper.id} has no abstract - triggering background enrichment`,
+        );
+
+        // Fire-and-forget abstract enrichment
+        this.enrichAbstractForPaper(paper.id, sanitized.doi, sanitized.url, sanitized.pmid)
+          .then((enriched) => {
+            if (enriched) {
+              this.logger.log(`✅ Abstract enriched for paper ${paper.id}`);
+            } else {
+              this.logger.debug(`⚠️  Abstract enrichment failed for paper ${paper.id}`);
+            }
+          })
+          .catch((err: Error) => {
+            this.logger.warn(
+              `❌ Abstract enrichment error for ${paper.id}: ${err.message}`,
+            );
+          });
       }
 
       return { success: true, paperId: paper.id };
@@ -609,6 +648,138 @@ export class PaperDatabaseService {
     // Validate userId
     if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
       throw new Error('Invalid userId: must be non-empty string');
+    }
+  }
+
+  // ==========================================================================
+  // PRIVATE UTILITY METHODS
+  // ==========================================================================
+
+  /**
+   * Calculate word count from text
+   *
+   * Phase 10.184: Used to calculate abstractWordCount during paper save
+   *
+   * @param text - Text to count words in
+   * @returns Word count (0 if empty/null)
+   *
+   * @private
+   */
+  private calculateWordCount(text: string | null | undefined): number {
+    if (!text || typeof text !== 'string') {
+      return 0;
+    }
+
+    const trimmed = text.trim();
+    if (trimmed.length === 0) {
+      return 0;
+    }
+
+    // Split on whitespace and filter empty strings
+    return trimmed.split(/\s+/).filter((word) => word.length > 0).length;
+  }
+
+  /**
+   * Phase 10.185: Proactive abstract enrichment for papers without abstracts
+   *
+   * Fetches abstract from OpenAlex, CrossRef, or Semantic Scholar and updates
+   * the paper in the database. This prevents the "218 papers with no content"
+   * issue during theme extraction.
+   *
+   * @param paperId - Database ID of the paper
+   * @param doi - Paper DOI (optional)
+   * @param url - Paper URL (optional)
+   * @param pmid - Paper PMID (optional)
+   * @returns true if abstract was successfully enriched, false otherwise
+   *
+   * @private
+   */
+  private async enrichAbstractForPaper(
+    paperId: string,
+    doi: string | null,
+    url: string | null,
+    pmid: string | null,
+  ): Promise<boolean> {
+    try {
+      // Phase 10.185 FIX: Check current paper state FIRST to avoid race conditions
+      // Don't overwrite if paper already has a good abstract or full-text
+      const currentPaper = await this.prisma.paper.findUnique({
+        where: { id: paperId },
+        select: { abstract: true, fullText: true, fullTextStatus: true },
+      });
+
+      if (!currentPaper) {
+        this.logger.debug(`[Phase 10.185] Paper ${paperId} not found - skipping enrichment`);
+        return false;
+      }
+
+      // Skip if paper already has a valid abstract (100+ chars)
+      if (currentPaper.abstract && currentPaper.abstract.trim().length >= 100) {
+        this.logger.debug(
+          `[Phase 10.185] Paper ${paperId} already has abstract (${currentPaper.abstract.length} chars) - skipping`,
+        );
+        return true; // Already enriched
+      }
+
+      // Skip if full-text is already being fetched or succeeded
+      if (currentPaper.fullTextStatus === 'fetching' || currentPaper.fullTextStatus === 'success') {
+        this.logger.debug(
+          `[Phase 10.185] Paper ${paperId} full-text status is ${currentPaper.fullTextStatus} - skipping abstract enrichment`,
+        );
+        return false;
+      }
+
+      // Call UniversalAbstractEnrichmentService to fetch abstract
+      // Convert null to undefined for type compatibility
+      const result = await this.abstractEnrichmentService.enrichAbstract(
+        doi ?? undefined,
+        url ?? undefined,
+        pmid ?? undefined,
+      );
+
+      if (!result || !result.abstract || result.abstract.trim().length < 100) {
+        this.logger.debug(
+          `[Phase 10.185] No usable abstract found for paper ${paperId} (min 100 chars required)`,
+        );
+        return false;
+      }
+
+      // Calculate word count
+      const abstractWordCount = this.calculateWordCount(result.abstract);
+
+      // Phase 10.185 FIX: Only update wordCount if NOT already set from full-text
+      // This prevents overwriting better full-text wordCount with abstract wordCount
+      const updateData: {
+        abstract: string;
+        abstractWordCount: number;
+        wordCount?: number;
+      } = {
+        abstract: result.abstract,
+        abstractWordCount,
+      };
+
+      // Only set wordCount if paper doesn't have full-text yet
+      if (!currentPaper.fullText) {
+        updateData.wordCount = abstractWordCount;
+      }
+
+      // Update paper with enriched abstract
+      await this.prisma.paper.update({
+        where: { id: paperId },
+        data: updateData,
+      });
+
+      this.logger.log(
+        `📝 [Phase 10.185] Abstract enriched for ${paperId}: ${abstractWordCount} words from ${result.source}`,
+      );
+
+      return true;
+    } catch (error: unknown) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.logger.warn(
+        `[Phase 10.185] Failed to enrich abstract for ${paperId}: ${errorMsg}`,
+      );
+      return false;
     }
   }
 }

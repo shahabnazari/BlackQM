@@ -342,28 +342,30 @@ export const PIPELINE_STAGES: PipelineStageConfig[] = [
  * Each tier visually distinct with clear separation
  */
 export const ORBIT_CONFIGS: Record<SourceTier, OrbitConfig> = {
+  // Phase 10.203: BIGGER orbits for 600x420 galaxy
+  // Galaxy center is (300, 210), max radius ~260x180
   fast: {
-    radius: 45,
-    radiusX: 52,       // Inner core - compact
-    radiusY: 36,
+    radius: 90,
+    radiusX: 110,       // Inner orbit - clearly visible
+    radiusY: 80,
     speed: 0,
     startAngle: 0,
     direction: 1,
   },
   medium: {
-    radius: 75,
-    radiusX: 88,       // Middle ring
-    radiusY: 60,
+    radius: 150,
+    radiusX: 180,       // Middle orbit - well separated
+    radiusY: 125,
     speed: 0,
-    startAngle: Math.PI / 6,   // 30° offset
+    startAngle: Math.PI / 8,    // 22.5° offset for better distribution
     direction: -1,
   },
   slow: {
-    radius: 110,
-    radiusX: 130,      // Outer ring
-    radiusY: 88,
+    radius: 210,
+    radiusX: 250,       // Outer orbit - fills galaxy nicely
+    radiusY: 170,
     speed: 0,
-    startAngle: Math.PI / 4,   // 45° offset
+    startAngle: Math.PI / 6,    // 30° offset
     direction: 1,
   },
 };
@@ -668,19 +670,21 @@ export const QUALITY_METER_SIZE = {
  * - Gap: 24px (Apple-standard spacing)
  */
 export const PIPELINE_LAYOUT = {
-  minWidth: 880,
-  minHeight: 480,
-  padding: 20,
-  // Phase 10.168: Balanced galaxy container
-  constellationWidth: 400,
-  constellationHeight: 280,
+  minWidth: 960,
+  minHeight: 560,
+  padding: 24,
+  // Phase 10.203: MUCH BIGGER Galaxy - Panels are vertical, so galaxy takes more horizontal space
+  constellationWidth: 600,    // Increased from 520 for bigger galaxy
+  constellationHeight: 420,   // Increased from 360 (maintains ~0.7 aspect ratio)
   constellationCenterOffsetX: 0,
-  stageGap: 8,
-  // Phase 10.168: Detail panel widths
-  brainWidth: 220,
-  qualityWidth: 200,
-  // Phase 10.168: Apple-standard gap (24px base unit)
-  detailPanelGap: 24,
+  stageGap: 10,
+  // Phase 10.203: Narrow vertical panel stack on right
+  filterPanelWidth: 240,      // Narrower panels to give more space to galaxy
+  brainWidth: 240,
+  qualityWidth: 240,
+  // Phase 10.203: Tighter spacing for compact design
+  galaxyToPanelGap: 24,       // Reduced gap
+  detailPanelGap: 16,         // Reduced gap between stacked panels
 };
 
 /**

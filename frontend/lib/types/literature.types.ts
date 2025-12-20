@@ -220,6 +220,16 @@ export interface SearchFilters {
   authorSearchMode?: 'contains' | 'exact';
   includeAIMode?: boolean;
   minCitations?: number;
+  /**
+   * Phase 10.195: Full-text enforcement filter
+   * When true, only returns papers with full-text available
+   */
+  hasFullTextOnly?: boolean;
+  /**
+   * Phase 10.195: Exclude document types
+   * When true, excludes books and book chapters from results
+   */
+  excludeBooks?: boolean;
 }
 
 export interface FilterPreset {
