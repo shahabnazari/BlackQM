@@ -1,0 +1,51 @@
+{
+  "name": "VQMethod AI Development - 8-Core Optimized",
+  "image": "mcr.microsoft.com/devcontainers/typescript-node:1-20-bullseye",
+
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+
+  "postCreateCommand": "npm install",
+
+  "forwardPorts": [3000, 4000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Frontend (Next.js)",
+      "onAutoForward": "notify"
+    },
+    "4000": {
+      "label": "Backend (NestJS)",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+      },
+      "extensions": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "ms-vscode.vscode-typescript-next"
+      ]
+    }
+  },
+
+  "hostRequirements": {
+    "cpus": 8,
+    "memory": "32gb",
+    "storage": "32gb"
+  },
+
+  "remoteEnv": {
+    "EMBEDDING_POOL_SIZE": "6"
+  }
+}
