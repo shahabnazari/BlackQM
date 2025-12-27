@@ -40,12 +40,12 @@
   },
 
   "hostRequirements": {
-    "cpus": 4,
-    "memory": "16gb",
+    "cpus": 8,
+    "memory": "64gb",
     "storage": "32gb"
   },
 
   "remoteEnv": {
-    "EMBEDDING_POOL_SIZE": "3"
+    "EMBEDDING_POOL_SIZE": "6"
   }
 }
